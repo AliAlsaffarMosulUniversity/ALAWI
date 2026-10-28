@@ -252,6 +252,7 @@ function remove(f,id){
  const col=COLS[f];
  if(col==='teachers'){const refs=teacherRefs(id);if(refs.length)return toast('لا يمكن حذف التدريسي لارتباطه بـ: '+refs.map(([l,n])=>n+' '+l).join('، ')+'. احذفها أو انقلها أولاً.')}
  if(!confirm('حذف هذا السجل نهائياً من هذا المتصفح؟'))return;
+ if(col==='announcements')attachList(db.announcements.find(x=>x.id===id)||{}).forEach(deleteChunks);
  db[col]=db[col].filter(x=>x.id!==id);if(editing?.id===id)editing=null;
  if(col==='courses'||col==='teachers')db.scheduleStale=true;
  commit('تم الحذف');
@@ -260,8 +261,33 @@ function csv(kind){const rows=kind==='schedule'?[['اليوم','الفترة','�
 function download(file,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=file;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 // المرفقات تُحفظ داخل سجل التبليغ نفسه (حد المستند في Firestore 1 ميغابايت)،
 // لذا تتقاسم الصور المساحة المتبقية بعد ملفات PDF وتُصغَّر كل صورة لتناسب حصتها
-const ATTACH_MAX=900000,ATTACH_COUNT=10;
-const kb=n=>Math.ceil(n/1024)+' كيلوبايت';
+const ATTACH_MAX=900000,ATTACH_COUNT=10,FILE_MAX=10*1024*1024,CHUNK=900*1024;
+// الملفات غير الصور (PDF وغيرها) في وضع المزامنة تُقسَّم إلى أجزاء ≤ 900 كيلوبايت تُحفظ في مستندات
+// meta/f_<id>_<n>، فيصل حجم الملف إلى 10 ميغابايت على الخطة المجانية. مجموعة meta مسموحة في القواعد
+// للقراءة لكل حساب جامعي وللكتابة للمشرفين، والتطبيق لا يستمع إلا إلى meta/state فلا تُحمَّل الأجزاء إلا عند الطلب.
+async function uploadChunks(file){
+ const {doc,setDoc,Bytes}=cloud.sdk,bytes=new Uint8Array(await file.arrayBuffer()),n=Math.max(1,Math.ceil(bytes.length/CHUNK)),ref='f_'+uid();
+ try{
+  for(let i=0;i<n;i++){toast('جارٍ رفع '+file.name+(n>1?' ('+(i+1)+' من '+n+')':'')+'…');await setDoc(doc(cloud.fs,'meta',ref+'_'+i),{data:Bytes.fromUint8Array(bytes.subarray(i*CHUNK,(i+1)*CHUNK)),i,n})}
+ }catch(e){deleteChunks({ref,chunks:n});throw Error('تعذر رفع '+file.name+': '+e.message)}
+ return {name:file.name,type:file.type||'application/octet-stream',size:file.size,ref,chunks:n};
+}
+function deleteChunks(x){
+ if(!x?.ref||!cloud.on||!cloud.sdk)return;
+ const {doc,deleteDoc}=cloud.sdk;
+ for(let i=0;i<x.chunks;i++)deleteDoc(doc(cloud.fs,'meta',x.ref+'_'+i)).catch(()=>{});
+}
+async function openChunked(x){
+ const w=window.open('','_blank');
+ try{
+  const {doc,getDoc}=cloud.sdk,parts=[];
+  for(let i=0;i<x.chunks;i++){toast('جارٍ تحميل '+x.name+(x.chunks>1?' ('+(i+1)+' من '+x.chunks+')':'')+'…');const d=await getDoc(doc(cloud.fs,'meta',x.ref+'_'+i));if(!d.exists())throw Error('جزء مفقود من الملف');parts.push(d.data().data.toUint8Array())}
+  const url=URL.createObjectURL(new Blob(parts,{type:x.type}));
+  if(w&&/pdf|image/.test(x.type))w.location=url;else{w?.close();const a=document.createElement('a');a.href=url;a.download=x.name;a.click()}
+  toast('تم فتح '+x.name);
+ }catch(e){w?.close();toast('تعذر فتح المرفق: '+e.message)}
+}
+const kb=n=>n>=1024*1024?(n/1048576).toFixed(1)+' ميغابايت':Math.ceil(n/1024)+' كيلوبايت';
 const attachList=a=>Array.isArray(a.attachments)?a.attachments:a.fileData?[{name:a.file||'مرفق',data:a.fileData}]:[];
 function fileUrl(b){return new Promise((ok,fail)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>fail(Error('تعذر قراءة '+b.name));r.readAsDataURL(b)})}
 async function shrinkImage(file,share){
@@ -278,11 +304,13 @@ async function shrinkImage(file,share){
 async function readAttachments(files,kept){
  const imgs=files.filter(f=>/^image\/(jpeg|png|webp|bmp)$/.test(f.type)),others=files.filter(f=>!imgs.includes(f));
  if(kept.length+files.length>ATTACH_COUNT)throw Error('الحد الأقصى '+ATTACH_COUNT+' مرفقات في التبليغ الواحد');
- let left=ATTACH_MAX-kept.reduce((n,x)=>n+x.data.length,0);
+ let left=ATTACH_MAX-kept.reduce((n,x)=>n+(x.data||'').length,0);
+ const big=others.find(f=>f.size>FILE_MAX);if(big)throw Error('حجم '+big.name+' '+kb(big.size)+'، والحد الأقصى للملف 10 ميغابايت');
  const out=[];
  for(const f of others){
+  if(cloud.on){out.push(await uploadChunks(f));continue}
   const data=await fileUrl(f);
-  if(data.length>left)throw Error('المساحة لا تكفي للملف '+f.name+' ('+kb(f.size)+'). مجموع ملفات PDF في التبليغ الواحد يجب ألا يتجاوز نحو 650 كيلوبايت');
+  if(data.length>left)throw Error('المساحة لا تكفي للملف '+f.name+' ('+kb(f.size)+'). في النسخة المحلية دون مزامنة، مجموع الملفات في التبليغ الواحد نحو 650 كيلوبايت');
   left-=data.length;out.push({name:f.name,data});
  }
  for(let i=0;i<imgs.length;i++){const x=await shrinkImage(imgs[i],Math.floor(left/(imgs.length-i)));left-=x.data.length;out.push(x)}
@@ -290,9 +318,9 @@ async function readAttachments(files,kept){
 }
 function attachment(a){
  const list=attachList(a);if(!list.length)return '';
- const imgs=list.filter(x=>x.data.startsWith('data:image/')),files=list.filter(x=>!imgs.includes(x));
+ const imgs=list.filter(x=>x.data?.startsWith('data:image/')),files=list.filter(x=>!imgs.includes(x));
  return (imgs.length?'<div class="attach-grid'+(imgs.length===1?' single':'')+'">'+imgs.map(x=>'<img class="attach-img" src="'+esc(x.data)+'" alt="'+esc(x.name)+'" title="اضغط لفتح الصورة بالحجم الكامل" loading="lazy">').join('')+'</div>':'')
-  +(files.length?'<div class="attach-files">'+files.map(x=>'<a class="btn-sm secondary" href="'+esc(x.data)+'" download="'+esc(x.name)+'">📄 '+esc(x.name)+'</a>').join('')+'</div>':'');
+  +(files.length?'<div class="attach-files">'+files.map(x=>x.ref?'<button class="btn-sm secondary" data-chunked="'+esc(JSON.stringify({name:x.name,type:x.type,ref:x.ref,chunks:x.chunks}))+'">📄 '+esc(x.name)+' <small>('+kb(x.size)+')</small></button>':'<a class="btn-sm secondary" href="'+esc(x.data)+'" download="'+esc(x.name)+'">📄 '+esc(x.name)+'</a>').join('')+'</div>':'');
 }
 function bind(id,fn){const f=document.getElementById(id);if(f)f.onsubmit=e=>{e.preventDefault();fn(Object.fromEntries(new FormData(f)),f)}}
 
@@ -349,7 +377,7 @@ function announcementsView(){
   +(admin?readPill(a)+(unread.length&&db.teachers.length?'<details class="unread"><summary>لم يؤكد القراءة ('+unread.length+')</summary><p class="muted">'+unread.map(t=>esc(t.name)).join('، ')+'</p></details>':'')
    :person?(a.read.includes(person)?pill('ok','تمت القراءة'):'<button class="btn-sm" data-read="'+a.id+'">تأكيد القراءة</button>'):'<span class="muted">'+(cloud.on?'حسابك غير مرتبط بسجل تدريسي':'اختر التدريسي لتأكيد القراءة')+'</span>')+'</article>';
  }).join('');
- return (admin?section(formTitle('announcement','إنشاء تبليغ','تعديل التبليغ'),form('announcement',field('title','عنوان التبليغ','text',true,'full')+'<label class="full">نص التبليغ<textarea name="body"></textarea></label>'+'<label>مرفقات: صور أو ملفات PDF (حتى '+ATTACH_COUNT+')<input name="file" type="file" accept="image/*,.pdf" multiple></label>'+keptAttachments(),'نشر التبليغ')):'')
+ return (admin?section(formTitle('announcement','إنشاء تبليغ','تعديل التبليغ'),form('announcement',field('title','عنوان التبليغ','text',true,'full')+'<label class="full">نص التبليغ<textarea name="body"></textarea></label>'+'<label>مرفقات: صور أو ملفات PDF (حتى '+ATTACH_COUNT+'، والملف حتى 10 ميغابايت)<input name="file" type="file" accept="image/*,.pdf" multiple></label>'+keptAttachments(),'نشر التبليغ')):'')
  +section('سجل التبليغات',list||'<p class="empty">لا توجد تبليغات</p>');
 }
 function keptAttachments(){
@@ -428,11 +456,13 @@ bind('teacher',(d,f)=>{
 });
 bind('announcement',async(d,f)=>{
  const ed=editId('announcement'),old=ed?db.announcements.find(a=>a.id===ed):null,drop=new FormData(f).getAll('drop').map(Number);
+ const dropped=(old?attachList(old):[]).filter((x,i)=>drop.includes(i));
  const kept=(old?attachList(old):[]).filter((x,i)=>!drop.includes(i)),files=[...f.elements.file.files],btn=f.querySelector('button');
  let added=[];
  if(files.length){btn.disabled=true;toast('جارٍ تجهيز المرفقات…');try{added=await readAttachments(files,kept)}catch(e){btn.disabled=false;return toast(e.message)}}
  const rec={title:d.title.trim(),body:d.body.trim(),attachments:[...kept,...added],file:'',fileData:''};
  if(!ed)Object.assign(rec,{date:new Date().toLocaleString('ar-IQ'),read:[]});
+ dropped.forEach(deleteChunks);
  upsert('announcement',rec);commit(ed?'تم حفظ التعديل':cloud.on?'تم نشر التبليغ':'تم نشر التبليغ على هذا المتصفح');
 });
 bind('course',d=>{const s=d.sessions===''?1:Number(d.sessions);if(!Number.isInteger(s)||s<1||s>20)return toast('عدد الحصص يجب أن يكون عدداً صحيحاً بين 1 و20');const ed=editId('course');upsert('course',{title:d.title.trim(),teacher:d.teacher,sessions:s,room:d.room.trim()});db.scheduleStale=true;commit(ed?'تم حفظ التعديل':'تمت إضافة المادة')});
@@ -454,6 +484,7 @@ if($('#scheduleFilter')){$('#scheduleFilter').value=scheduleFilter;$('#scheduleF
 bind('restore',async(d,f)=>{try{const x=JSON.parse(await f.elements.file.files[0].text());for(const k in initial)if(!Array.isArray(x[k]))throw Error();if(!x.teachers.every(t=>typeof t.id==='string'&&typeof t.name==='string'&&typeof (t.days??'')==='string')||!x.announcements.every(a=>Array.isArray(a.read))||!x.committees.every(c=>Array.isArray(c.members))||!x.polls.every(p=>Array.isArray(p.answers)))throw Error();if(confirm(cloud.on?'استبدال البيانات المشتركة لكل المستخدمين بالنسخة المختارة؟':'استبدال بيانات هذا المتصفح بالنسخة المختارة؟')){db=x;db.workloads=Array.isArray(db.workloads)?db.workloads:[];db.workloadMeta=db.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};editing=null;commit('تم الاستيراد')}}catch{toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}});
 bind('adminForm',d=>{const e=d.email.trim().toLowerCase();if(!e.endsWith('@'+DOMAIN))return toast('يجب أن يكون البريد من نطاق '+DOMAIN);if(cloud.admins.includes(e))return toast('الحساب مشرف مسبقاً');setAdmins([...cloud.admins,e])});
 document.querySelectorAll('[data-admin-del]').forEach(b=>b.onclick=()=>{const e=b.dataset.adminDel;if(e===cloud.user.email.toLowerCase()&&!confirm('ستفقد صلاحية الإدارة بإزالة حسابك. متابعة؟'))return;setAdmins(cloud.admins.filter(x=>x!==e))});
+document.querySelectorAll('[data-chunked]').forEach(b=>b.onclick=()=>openChunked(JSON.parse(b.dataset.chunked)));
 document.querySelectorAll('.attach-img').forEach(i=>i.onclick=async()=>{const w=window.open();w.location=URL.createObjectURL(await (await fetch(i.src)).blob())});
 fillEditing();enhanceTables();
 }
