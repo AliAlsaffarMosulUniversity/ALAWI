@@ -604,12 +604,18 @@ function updateIdentity(){
  cloud.admin=!!cloud.admins?.includes(email);
  cloud.teacherId=db.teachers.find(t=>(t.email||'').trim().toLowerCase()===email)?.id||'';
  role=cloud.admin?'admin':'teacher';person=cloud.teacherId;
- if(cloud.admin&&!cloud.wlUnsub)cloud.wlUnsub=listen('workloads');
+ if(cloud.admin&&!cloud.wlUnsub)cloud.wlUnsub=listen('workloads',workloadsError);
  if(!cloud.admin&&cloud.wlUnsub){cloud.wlUnsub();cloud.wlUnsub=null;delete cloud.raw.workloads;delete cloud.shadow.workloads}
 }
-function listen(c){
+function listen(c,onError=listenError){
  const {collection,onSnapshot}=cloud.sdk;
- return onSnapshot(collection(cloud.fs,c),s=>{cloud.raw[c]=new Map(s.docs.map(d=>[d.id,d.data()]));cloud.shadow[c]=new Map(s.docs.map(d=>[d.id,stable(d.data())]));loaded(c)},listenError);
+ return onSnapshot(collection(cloud.fs,c),s=>{cloud.raw[c]=new Map(s.docs.map(d=>[d.id,d.data()]));cloud.shadow[c]=new Map(s.docs.map(d=>[d.id,stable(d.data())]));loaded(c)},onError);
+}
+// صلاحية المشرف قد تصل إلى الخادم بعد لحظات من ظهورها محلياً، فنعيد المحاولة بدل إغلاق التطبيق
+function workloadsError(e){
+ cloud.wlUnsub=null;
+ if(e.code!=='permission-denied')return listenError(e);
+ setTimeout(()=>{if(cloud.admin&&!cloud.wlUnsub&&cloud.user)cloud.wlUnsub=listen('workloads',workloadsError)},3000);
 }
 function listenError(e){
  if(e.code==='permission-denied')gate('denied');
@@ -620,7 +626,7 @@ function subscribe(){
  cloud.expect=CORE.length+4;
  for(const c of [...CORE,'reads','answers'])cloud.unsubs.push(listen(c));
  cloud.unsubs.push(onSnapshot(doc(cloud.fs,'meta','state'),s=>{const d=s.exists()?s.data():null;cloud.raw.meta=new Map(d?[['state',d]]:[]);cloud.shadow.meta=new Map(d?[['state',stable(d)]]:[]);loaded('meta')},listenError));
- cloud.unsubs.push(onSnapshot(doc(cloud.fs,'config','admins'),s=>{cloud.admins=s.exists()?(s.data().emails||[]).map(e=>String(e).toLowerCase()):null;loaded('admins')},listenError));
+ cloud.unsubs.push(onSnapshot(doc(cloud.fs,'config','admins'),{includeMetadataChanges:true},s=>{if(s.metadata.hasPendingWrites)return;cloud.admins=s.exists()?(s.data().emails||[]).map(e=>String(e).toLowerCase()):null;loaded('admins')},listenError));
 }
 function loaded(c){
  cloud.loaded.add(c);
