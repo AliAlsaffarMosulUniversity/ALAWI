@@ -11,7 +11,14 @@
 //   appId: "..."
 // };
 // هذه القيم ليست سرية؛ الحماية تأتي من قواعد firestore.rules.
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBKJMTbOB6QfPg3j1uTocR2LUX_zTeL7_8",
+  authDomain: "alawi-department.firebaseapp.com",
+  projectId: "alawi-department",
+  storageBucket: "alawi-department.firebasestorage.app",
+  messagingSenderId: "232978395414",
+  appId: "1:232978395414:web:42ea214adcaadac31de037"
+};
 
 // النطاق المسموح بتسجيل الدخول منه (يجب أن يطابق firestore.rules)
 window.ALLOWED_DOMAIN = 'uomosul.edu.iq';
