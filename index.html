@@ -8,7 +8,7 @@
 <script>
 'use strict';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','النسخ الاحتياطي'];
+const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','النسخ الاحتياطي','الإدارة واستيراد Excel'];
 const key='smart-department-v1';
 const initial={teachers:[],announcements:[],courses:[],schedule:[],invigilation:[],tasks:[],committees:[],polls:[]};
 let db;try{db=JSON.parse(localStorage.getItem(key))||structuredClone(initial)}catch{db=structuredClone(initial)}
@@ -40,7 +40,9 @@ if(page===5)h=section('تكليف جديد',form('task',field('title','عنوا�
 if(page===6)h=section('تشكيل لجنة',form('committee',field('title','اسم اللجنة')+teacherField('chair')+'<label>أعضاء اللجنة<select name="members" multiple required>'+opts()+'</select><small>استخدم Ctrl لاختيار عدة أعضاء على الحاسوب.</small></label>'+field('mission','مهام اللجنة'))+db.committees.map(c=>'<div class="item"><h3>'+esc(c.title)+'</h3><p>الرئيس: '+esc(name(c.chair))+'</p><p>الأعضاء: '+esc(c.members.map(name).join('، '))+'</p><p>'+esc(c.mission)+'</p></div>').join(''));
 if(page===7)h=section('طرح سؤال',form('poll',field('question','السؤال'),'إضافة السؤال'))+section('الأسئلة والإجابات',db.polls.map(p=>'<div class="item"><h3>'+esc(p.question)+'</h3>'+form('answer-'+p.id,teacherField()+field('answer','الإجابة'),'حفظ الإجابة')+table(['التدريسي','الإجابة'],p.answers.map(a=>[esc(name(a.teacher)),esc(a.answer)]))+'</div>').join('')||'<p class="empty">لا توجد أسئلة</p>');
 if(page===8)h=section('حماية بيانات المتصفح','<p>صدّر نسخة JSON دورياً. الاستيراد يستبدل بيانات هذا المتصفح بعد تأكيدك.</p><div class="tools"><button data-action="backup">تنزيل نسخة احتياطية</button></div>'+form('restore',field('file','استيراد نسخة JSON','file'),'استيراد')+'<p>لا تُخزّن بيانات حساسة في النسخة التجريبية. لا يتضمن المشروع حسابات أو قاعدة بيانات مشتركة.</p>');
+if(page===9)h=adminView();
 $('#view').innerHTML=h;
+if(page===9)bindAdmin();
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{page=Number(b.dataset.page);render()});
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>action(b.dataset.action));
 bind('teacher',d=>{const days=d.days.split(/[,،]/).map(s=>s.trim()).filter(Boolean);if(!days.length||days.some(d=>!['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'].includes(d)))return toast('اكتب أياماً من الأحد إلى الخميس، مثل: الأحد، الثلاثاء');db.teachers.push({id:uid(),name:d.name.trim(),days:days.join('، ')});save();render()});
@@ -67,5 +69,70 @@ const courses=[...db.courses].sort((a,b)=>(db.teachers.find(t=>t.id===a.teacher)
 for(const c of courses)for(let i=0;i<c.sessions;i++){let found=false;const t=db.teachers.find(t=>t.id===c.teacher);for(const day of days){if(!t?.days.split(/[,،]/).map(s=>s.trim()).includes(day))continue;for(const slot of slots){if(!result.some(x=>x.day===day&&x.slot===slot&&(x.teacher===c.teacher||x.room===c.room))){result.push({course:c.title,teacher:c.teacher,room:c.room,day,slot});found=true;break}}if(found)break}if(!found)failed.push(c.title)}
 db.schedule=result;save();render();$('#scheduleMessage').textContent=failed.length?'تعذر إدراج '+failed.length+' حصة: '+failed.join('، ')+'. وسّع أيام التواجد أو راجع القاعات.':'تم توليد '+result.length+' حصة دون تعارض تدريسي أو قاعة.';
 }}
+
+let importRows=[],importBook=null,importMessage='';
+const teacherColumns=['الاسم','أيام التواجد','اللقب العلمي','التخصص','البريد الإلكتروني','الهاتف'];
+const norm=v=>String(v??'').trim().replace(/\s+/g,' ');
+const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+function validateTeacherRows(rows){
+ if(!rows.length)throw Error('الورقة فارغة');
+ const headers=rows[0].map(norm), aliases=[['الاسم','اسم التدريسي','الاسم الكامل'],['أيام التواجد','الأيام المتاحة','الايام المتاحة'],['اللقب العلمي'],['التخصص'],['البريد الإلكتروني','البريد الالكتروني'],['الهاتف','رقم الهاتف']];
+ const indexes=aliases.map(a=>headers.findIndex(h=>a.includes(h)));
+ if(indexes[0]<0)throw Error('يجب أن يحتوي الصف الأول على عمود الاسم أو اسم التدريسي');
+ const seen=new Set(db.teachers.map(t=>norm(t.name)));
+ return rows.slice(1).map((row,i)=>{
+ const values=indexes.map(j=>j<0?'':norm(row[j]));
+ if(!values.some(Boolean))return null;
+ const [name,rawDays,rank,specialty,email,phone]=values;
+ const days=[...new Set(rawDays.split(/[,،;؛\n]/).map(norm).filter(Boolean))];
+ let error=!name?'الاسم مطلوب':name.length>150?'الاسم طويل جداً':seen.has(name)?'اسم مكرر في الملف أو الدليل':days.some(d=>!dayNames.includes(d))?'أيام تواجد غير صحيحة':email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'بريد إلكتروني غير صحيح':'';
+ if(!error)seen.add(name);
+ return {row:i+2,name,days:days.join('، '),rank,specialty,email,phone,error};
+ }).filter(Boolean);
+}
+function adminView(){
+return section('الإدارة · استيراد بيانات التدريسيين','<p>اختر ملف Excel بصيغة .xlsx أو .xls، ثم راجع البيانات واعتمد الصفوف الصالحة. تُضاف السجلات الجديدة فقط دون تغيير السجلات الحالية.</p><p class="muted">العمود المطلوب: الاسم. اختياري: أيام التواجد، اللقب العلمي، التخصص، البريد الإلكتروني، الهاتف. افصل أيام التواجد بفاصلة؛ تركها فارغة يستلزم إضافتها قبل توليد الجدول.</p><div class="tools"><button id="excelTemplate">تنزيل نموذج Excel</button></div><label>ملف التدريسيين<input id="excelFile" type="file" accept=".xlsx,.xls"></label><p class="muted">الحد الأقصى 5 ميغابايت و2000 صف في الورقة. تتم قراءة الملف محلياً في المتصفح.</p><div id="excelStatus" role="status">'+esc(importMessage)+'</div>'+(importBook?'<label>ورقة العمل<select id="excelSheet">'+importBook.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select></label>':'')+'<div id="excelPreview"></div>')+section('دليل معلومات التدريسيين',table(teacherColumns,db.teachers.map(t=>[t.name,t.days,t.rank,t.specialty,t.email,t.phone].map(esc))));
+}
+let sheetJsPromise;
+function getSheetJs(){
+ if(window.XLSX)return Promise.resolve(window.XLSX);
+ if(!sheetJsPromise)sheetJsPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';s.onload=()=>window.XLSX?resolve(window.XLSX):reject(Error('تعذر تحميل قارئ Excel'));s.onerror=()=>{sheetJsPromise=null;s.remove();reject(Error('تعذر تحميل قارئ Excel. تحقق من اتصال الإنترنت وحاول مجدداً.'))};document.head.append(s)});
+ return sheetJsPromise;
+}
+function showExcelPreview(){
+ const target=document.getElementById('excelPreview');if(!target)return;
+ const valid=importRows.filter(r=>!r.error);
+ target.innerHTML='<p>عدد الصفوف: '+importRows.length+' · صالحة: '+valid.length+' · مستبعدة: '+(importRows.length-valid.length)+'</p>'+table(['الصف',...teacherColumns,'النتيجة'],importRows.map(r=>[r.row,...[r.name,r.days,r.rank,r.specialty,r.email,r.phone].map(esc),r.error?'<span class="danger">'+esc(r.error)+'</span>':'جاهز للإضافة']))+(valid.length?'<button id="excelCommit">اعتماد '+valid.length+' تدريسي</button>':'');
+ const b=document.getElementById('excelCommit');if(b)b.onclick=()=>{
+ const checked=validateTeacherRows([teacherColumns,...valid.map(r=>[r.name,r.days,r.rank,r.specialty,r.email,r.phone])]).filter(r=>!r.error);
+ const teachers=checked.map(({row,error,...t})=>({...t,id:uid()})),next={...db,teachers:[...db.teachers,...teachers]};
+ try{localStorage.setItem(key,JSON.stringify(next))}catch{return toast('تعذر الحفظ؛ لم تُعتمد البيانات')}
+ db=next;importRows=[];importBook=null;importMessage='تمت إضافة '+teachers.length+' تدريسي بنجاح';render();toast(importMessage);
+ };
+}
+function selectExcelSheet(){
+ importRows=[];
+ try{
+ const sheet=importBook.Sheets[document.getElementById('excelSheet').value];
+ const range=window.XLSX.utils.decode_range(sheet['!ref']||'A1');
+ if(range.e.r-range.s.r>2000||range.e.c-range.s.c>100)throw Error('الورقة تتجاوز الحد المسموح: 2000 صف و100 عمود');
+ importRows=validateTeacherRows(window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:true}));
+ document.getElementById('excelStatus').textContent='راجع الصفوف قبل اعتمادها.';
+ }catch(e){document.getElementById('excelStatus').textContent=e.message}
+ showExcelPreview();
+}
+function bindAdmin(){
+ document.getElementById('excelTemplate').onclick=async()=>{try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([teacherColumns]);sheet['!cols']=teacherColumns.map(()=>({wch:25}));X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}};
+ document.getElementById('excelFile').onchange=async e=>{
+ importRows=[];importBook=null;showExcelPreview();
+ const f=e.target.files[0],status=document.getElementById('excelStatus');if(!f)return;
+ if(!/\.(xlsx|xls)$/i.test(f.name)||f.size>5*1024*1024){status.textContent='اختر ملف Excel لا يتجاوز 5 ميغابايت';return}
+ status.textContent='جارٍ قراءة الملف…';
+ try{const X=await getSheetJs();const book=X.read(await f.arrayBuffer(),{type:'array',cellFormula:false,cellHTML:false});if(!book.SheetNames.length)throw Error('لا توجد أوراق عمل');importBook=book;importMessage='اختر ورقة العمل وراجع البيانات';render();selectExcelSheet()}catch(e){status.textContent='تعذر قراءة الملف: '+e.message}
+ };
+ const select=document.getElementById('excelSheet');if(select)select.onchange=selectExcelSheet;
+ showExcelPreview();
+}
+
 $('#date').textContent=new Date().toLocaleDateString('ar-IQ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});render();
 </script></html>
