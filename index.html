@@ -164,9 +164,9 @@ function save(){stamp();if(cloud.on){queuePush();return true}try{localStorage.se
 function toast(t){const el=$('#toast');el.textContent=t;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',3500)}
 function commit(msg){save();render();if(msg)toast(msg)}
 function field(n,title,type='text',required=true,cls=''){return '<label'+(cls?' class="'+cls+'"':'')+'>'+title+'<input name="'+n+'" type="'+type+'" '+(required?'required':'')+(type==='number'?' min="1" step="1"':'')+'></label>'}
-function teacherField(n='teacher',title='التدريسي'){return '<label>'+title+'<select name="'+n+'" required><option value="">اختر التدريسي</option>'+opts()+'</select></label>'}
+function teacherField(n='teacher',title='التدريسي',required=true){return '<label>'+title+'<select name="'+n+'"'+(required?' required':'')+'><option value="">'+(required?'اختر التدريسي':'غير محدد')+'</option>'+opts()+'</select></label>'}
 function checks(n,items){return '<div class="chips">'+items.map(([v,l])=>'<label class="chip"><input type="checkbox" name="'+n+'" value="'+esc(v)+'">'+esc(l)+'</label>').join('')+'</div>'}
-function name(id){return db.teachers.find(t=>t.id===id)?.name||'غير محدد'}
+function name(id){return db.teachers.find(t=>t.id===id)?.name||(id?'غير محدد':'—')}
 function nameTag(id){return esc(name(id))+(isExternal(db.teachers.find(t=>t.id===id))?' '+pill('info','خارجي'):'')}
 function pill(type,text){return '<span class="pill '+type+'">'+text+'</span>'}
 function table(headers,rows){return rows.length?'<div class="scroll"><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="empty">لا توجد سجلات بعد. أضف أول سجل للبدء.</p>'}
@@ -174,7 +174,7 @@ function form(id,body,button='حفظ'){const ed=editing?.form===id;return '<form
 function section(title,body){return '<section><h2>'+title+'</h2>'+body+'</section>'}
 function actions(f,id){if(!isAdmin())return '';return '<span class="row-actions"><button class="btn-sm secondary" data-edit="'+f+'|'+id+'">تعديل</button><button class="btn-sm ghost-danger" data-del="'+f+'|'+id+'">حذف</button></span>'}
 function formTitle(f,add,edit){return editing?.form===f?edit:add}
-function overdue(t){return !t.done&&t.due<today()}
+function overdue(t){return !t.done&&!!t.due&&t.due<today()}
 function upsert(f,rec){const col=COLS[f],id=editId(f);if(id){const i=db[col].findIndex(x=>x.id===id);db[col][i]={...db[col][i],...rec}}else db[col].push({id:uid(),...rec});editing=null}
 function teacherRefs(id){return [['مادة',db.courses.filter(c=>c.teacher===id).length],['تكليف',db.tasks.filter(t=>t.teacher===id).length],['مراقبة',db.invigilation.filter(x=>x.teacher===id).length],['لجنة',db.committees.filter(c=>c.chair===id||c.members.includes(id)).length],['سجل عبء',(db.workloads||[]).filter(w=>w.teacher===id).length]].filter(([,n])=>n)}
 function remove(f,id){
@@ -193,7 +193,7 @@ function dashboard(){
  if(!isAdmin())return teacherDashboard();
  const localCount=CORE.reduce((s,k)=>s+(localData[k]?.length||0),0);
  const migrate=cloud.on&&!CORE.some(c=>db[c].length)&&localCount?'<div class="alert ok"><span>توجد على هذا المتصفح بيانات محلية سابقة ('+localCount+' سجل). يمكنك رفعها إلى قاعدة البيانات المشتركة.</span><button data-action="migrate">رفع البيانات إلى السحابة</button></div>':'';
- const late=db.tasks.filter(overdue),noDays=db.teachers.filter(t=>!teacherDays(t).length),open=db.tasks.filter(t=>!t.done);
+ const late=db.tasks.filter(overdue),noDays=db.teachers.filter(t=>!isExternal(t)&&!teacherDays(t).length),open=db.tasks.filter(t=>!t.done);
  const cards=[[1,'التدريسيون',db.teachers.length,''],[2,'التبليغات',db.announcements.length,''],[5,'المهام المتأخرة',late.length,late.length?'danger':''],[6,'اللجان',db.committees.length,'']];
  const alerts=[];
  if(late.length)alerts.push(['danger',late.length+' مهمة متأخرة عن موعدها',5,'عرض التكليفات']);
@@ -233,7 +233,7 @@ function announcementsView(){
    :person?(a.read.includes(person)?pill('ok','تمت القراءة'):'<button class="btn-sm" data-read="'+a.id+'">تأكيد القراءة</button>'):'<span class="muted">'+(cloud.on?'حسابك غير مرتبط بسجل تدريسي':'اختر التدريسي لتأكيد القراءة')+'</span>')+'</article>';
  }).join('');
  return (cloud.on?'':section('طريقة العرض','<p class="muted">جرّب كيف يرى التدريسي التبليغات ويؤكد قراءتها. هذا عرض تجريبي وليس تسجيل دخول.</p><div class="tools"><label>نوع العرض<select id="role"><option value="admin">رئيس القسم</option><option value="teacher">تدريسي</option></select></label>'+(admin?'':'<label>التدريسي<select id="person"><option value="">اختر التدريسي</option>'+opts()+'</select></label>')+'</div>'))
- +(admin?section(formTitle('announcement','إنشاء تبليغ','تعديل التبليغ'),form('announcement',field('title','عنوان التبليغ','text',true,'full')+'<label class="full">نص التبليغ<textarea name="body" required></textarea></label>'+field('file','مرفق (يُسجَّل الاسم فقط)','file',false),'نشر التبليغ')):'')
+ +(admin?section(formTitle('announcement','إنشاء تبليغ','تعديل التبليغ'),form('announcement',field('title','عنوان التبليغ','text',true,'full')+'<label class="full">نص التبليغ<textarea name="body"></textarea></label>'+field('file','مرفق (يُسجَّل الاسم فقط)','file',false),'نشر التبليغ')):'')
  +section('سجل التبليغات',list||'<p class="empty">لا توجد تبليغات</p>');
 }
 function weekGrid(items){
@@ -242,8 +242,8 @@ function weekGrid(items){
 function coursesView(){
  const rooms=[...new Map(db.schedule.map(s=>[roomKey(s.room),s.room])).entries()],tids=[...new Set(db.schedule.map(s=>s.teacher))];
  const shown=db.schedule.filter(s=>!scheduleFilter||(scheduleFilter.startsWith('t:')?s.teacher===scheduleFilter.slice(2):roomKey(s.room)===scheduleFilter.slice(2)));
- return section(formTitle('course','المواد الدراسية','تعديل مادة'),(isAdmin()?form('course',field('title','اسم المادة')+teacherField()+field('sessions','عدد الحصص الأسبوعية','number')+field('room','القاعة'),'إضافة المادة'):'')
-  +table(['المادة','التدريسي','الحصص','القاعة',''],db.courses.map(c=>[esc(c.title),esc(name(c.teacher))+(teacherDays(db.teachers.find(t=>t.id===c.teacher)).length?'':' '+pill('warn','بلا أيام تواجد')),esc(c.sessions),esc(c.room),actions('course',c.id)])))
+ return section(formTitle('course','المواد الدراسية','تعديل مادة'),(isAdmin()?form('course',field('title','اسم المادة')+teacherField('teacher','التدريسي',false)+field('sessions','عدد الحصص الأسبوعية (1 إن تُرك فارغاً)','number',false)+field('room','القاعة','text',false),'إضافة المادة'):'')
+  +table(['المادة','التدريسي','الحصص','القاعة',''],db.courses.map(c=>[esc(c.title),esc(name(c.teacher))+(!c.teacher||teacherDays(db.teachers.find(t=>t.id===c.teacher)).length?'':' '+pill('warn','بلا أيام تواجد')),esc(c.sessions),esc(c.room),actions('course',c.id)])))
  +section('الجدول الأسبوعي','<p class="muted">خمسة أيام × أربع فترات، والحصة = فترة واحدة. يمنع تعارض التدريسي والقاعة، ويراعي أيام التواجد، ويوزّع حصص المادة الواحدة على أيام مختلفة قدر الإمكان.</p>'
   +(db.scheduleStale&&db.schedule.length?'<div class="alert warn"><span>تغيّرت المواد أو التدريسيون بعد آخر توليد. أعد توليد الجدول.</span></div>':'')
   +'<div class="tools">'+(isAdmin()?'<button data-action="generate">توليد الجدول</button>':'')+'<button class="secondary" data-action="csvSchedule">تصدير CSV</button><button class="secondary" data-action="print">طباعة / PDF</button></div>'
@@ -251,15 +251,15 @@ function coursesView(){
   +(db.schedule.length?'<div class="tools"><label>عرض<select id="scheduleFilter"><option value="">كل الجدول</option><optgroup label="حسب التدريسي">'+tids.map(id=>'<option value="t:'+esc(id)+'">'+esc(name(id))+'</option>').join('')+'</optgroup><optgroup label="حسب القاعة">'+rooms.map(([k,r])=>'<option value="r:'+esc(k)+'">'+esc(r)+'</option>').join('')+'</optgroup></select></label></div>'+weekGrid(shown):'<p class="empty">لم يُولَّد جدول بعد.</p>'));
 }
 function invigilationView(){
- return (isAdmin()?section(formTitle('invigilation','إضافة مراقبة امتحانية','تعديل مراقبة'),form('invigilation',field('exam','الامتحان')+teacherField()+field('date','التاريخ','date')+field('start','البداية','time')+field('end','النهاية','time')+field('room','القاعة'),'إضافة المراقبة')+'<p class="muted">يُفحص تداخل مراقبات التدريسي وحجز القاعة في اليوم والوقت نفسيهما.</p>'):'')
- +section('جدول المراقبات',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),nameTag(x.teacher),esc(x.date),'<span dir="ltr">'+esc(x.start)+' – '+esc(x.end)+'</span>',esc(x.room),actions('invigilation',x.id)])));
+ return (isAdmin()?section(formTitle('invigilation','إضافة مراقبة امتحانية','تعديل مراقبة'),form('invigilation',teacherField()+field('date','التاريخ','date')+field('exam','الامتحان','text',false)+field('start','البداية','time',false)+field('end','النهاية','time',false)+field('room','القاعة','text',false),'إضافة المراقبة')+'<p class="muted">يُفحص تداخل مراقبات التدريسي وحجز القاعة في اليوم والوقت نفسيهما.</p>'):'')
+ +section('جدول المراقبات',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),nameTag(x.teacher),esc(x.date),x.start||x.end?'<span dir="ltr">'+esc(x.start||'?')+' – '+esc(x.end||'?')+'</span>':'—',esc(x.room||'—'),actions('invigilation',x.id)])));
 }
 function tasksView(){
- return (isAdmin()?section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('due','آخر موعد','date'),'إضافة التكليف')):'')
- +section(isAdmin()?'التكليفات':'مهامي',table(['المهمة','التدريسي','الموعد','الحالة',''],db.tasks.filter(t=>isAdmin()||t.teacher===person).sort((a,b)=>(a.done-b.done)||String(a.due).localeCompare(b.due)).map(t=>[esc(t.title),esc(name(t.teacher)),esc(t.due),t.done?pill('ok','مكتملة'):overdue(t)?pill('danger','متأخرة'):pill('info','قيد الإنجاز'),(isAdmin()?'<span class="row-actions"><button class="btn-sm" data-done="'+t.id+'">'+(t.done?'إعادة فتح':'تسجيل الإنجاز')+'</button>'+actions('task',t.id)+'</span>':'')])));
+ return (isAdmin()?section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('due','آخر موعد','date',false),'إضافة التكليف')):'')
+ +section(isAdmin()?'التكليفات':'مهامي',table(['المهمة','التدريسي','الموعد','الحالة',''],db.tasks.filter(t=>isAdmin()||t.teacher===person).sort((a,b)=>(a.done-b.done)||String(a.due||'9999').localeCompare(b.due||'9999')).map(t=>[esc(t.title),esc(name(t.teacher)),esc(t.due||'—'),t.done?pill('ok','مكتملة'):overdue(t)?pill('danger','متأخرة'):pill('info','قيد الإنجاز'),(isAdmin()?'<span class="row-actions"><button class="btn-sm" data-done="'+t.id+'">'+(t.done?'إعادة فتح':'تسجيل الإنجاز')+'</button>'+actions('task',t.id)+'</span>':'')])));
 }
 function committeesView(){
- return (isAdmin()?section(formTitle('committee','تشكيل لجنة','تعديل اللجنة'),db.teachers.length?form('committee',field('title','اسم اللجنة')+teacherField('chair','رئيس اللجنة')+'<fieldset class="full"><legend>أعضاء اللجنة</legend>'+checks('members',db.teachers.map(t=>[t.id,t.name]))+'</fieldset><label class="full">مهام اللجنة<textarea name="mission" required></textarea></label>','تشكيل اللجنة'):'<p class="empty">أضف التدريسيين أولاً.</p>'):'')
+ return (isAdmin()?section(formTitle('committee','تشكيل لجنة','تعديل اللجنة'),db.teachers.length?form('committee',field('title','اسم اللجنة')+teacherField('chair','رئيس اللجنة',false)+'<fieldset class="full"><legend>أعضاء اللجنة</legend>'+checks('members',db.teachers.map(t=>[t.id,t.name]))+'</fieldset><label class="full">مهام اللجنة<textarea name="mission"></textarea></label>','تشكيل اللجنة'):'<p class="empty">أضف التدريسيين أولاً.</p>'):'')
  +section('اللجان',db.committees.map(c=>'<div class="item"><div class="item-head"><h3>'+esc(c.title)+'</h3>'+actions('committee',c.id)+'</div><p><b>الرئيس:</b> '+esc(name(c.chair))+'</p><p><b>الأعضاء ('+c.members.length+'):</b> '+esc(c.members.map(name).join('، '))+'</p><p class="pre muted">'+esc(c.mission)+'</p></div>').join('')||'<p class="empty">لا توجد لجان</p>');
 }
 function pollsView(){
@@ -306,16 +306,17 @@ bind('teacher',(d,f)=>{
  db.scheduleStale=true;commit(id?'تم حفظ التعديل':'تمت إضافة التدريسي');
 });
 bind('announcement',(d,f)=>{const file=f.elements.file.files[0]?.name,rec={title:d.title.trim(),body:d.body.trim()};if(file)rec.file=file;if(!editId('announcement'))Object.assign(rec,{date:new Date().toLocaleString('ar-IQ'),file:file||'',read:[]});const ed=editId('announcement');upsert('announcement',rec);commit(ed?'تم حفظ التعديل':'تم نشر التبليغ على هذا المتصفح')});
-bind('course',d=>{const s=Number(d.sessions);if(!Number.isInteger(s)||s<1||s>20)return toast('عدد الحصص يجب أن يكون عدداً صحيحاً بين 1 و20');const ed=editId('course');upsert('course',{title:d.title.trim(),teacher:d.teacher,sessions:s,room:d.room.trim()});db.scheduleStale=true;commit(ed?'تم حفظ التعديل':'تمت إضافة المادة')});
+bind('course',d=>{const s=d.sessions===''?1:Number(d.sessions);if(!Number.isInteger(s)||s<1||s>20)return toast('عدد الحصص يجب أن يكون عدداً صحيحاً بين 1 و20');const ed=editId('course');upsert('course',{title:d.title.trim(),teacher:d.teacher,sessions:s,room:d.room.trim()});db.scheduleStale=true;commit(ed?'تم حفظ التعديل':'تمت إضافة المادة')});
 bind('invigilation',d=>{
- const id=editId('invigilation');if(d.end<=d.start)return toast('النهاية يجب أن تكون بعد البداية');
- const clash=db.invigilation.filter(x=>x.id!==id&&x.date===d.date&&x.start<d.end&&d.start<x.end);
+ const id=editId('invigilation');if(d.start&&d.end&&d.end<=d.start)return toast('النهاية يجب أن تكون بعد البداية');
+ // التعارض يُفحص فقط حين تكون الأوقات مدخلة في المراقبتين
+ const clash=d.start&&d.end?db.invigilation.filter(x=>x.id!==id&&x.date===d.date&&x.start&&x.end&&x.start<d.end&&d.start<x.end):[];
  if(clash.some(x=>x.teacher===d.teacher))return toast('يوجد تعارض في مراقبات هذا التدريسي');
- const r=clash.find(x=>roomKey(x.room)===roomKey(d.room));if(r)return toast('القاعة محجوزة في هذا الوقت لامتحان: '+r.exam);
+ const r=d.room.trim()&&clash.find(x=>roomKey(x.room)===roomKey(d.room));if(r)return toast('القاعة محجوزة في هذا الوقت لامتحان: '+(r.exam||'آخر'));
  upsert('invigilation',{exam:d.exam.trim(),teacher:d.teacher,date:d.date,start:d.start,end:d.end,room:d.room.trim()});commit(id?'تم حفظ التعديل':'تمت إضافة المراقبة');
 });
 bind('task',d=>{const ed=editId('task');upsert('task',ed?{title:d.title.trim(),teacher:d.teacher,due:d.due}:{title:d.title.trim(),teacher:d.teacher,due:d.due,done:false});commit(ed?'تم حفظ التعديل':'تمت إضافة التكليف')});
-bind('committee',(d,f)=>{const members=new FormData(f).getAll('members');if(!members.length)return toast('اختر عضواً واحداً على الأقل');const ed=editId('committee');upsert('committee',{title:d.title.trim(),chair:d.chair,members,mission:d.mission.trim()});commit(ed?'تم حفظ التعديل':'تم تشكيل اللجنة')});
+bind('committee',(d,f)=>{const members=new FormData(f).getAll('members');const ed=editId('committee');upsert('committee',{title:d.title.trim(),chair:d.chair,members,mission:d.mission.trim()});commit(ed?'تم حفظ التعديل':'تم تشكيل اللجنة')});
 bind('poll',d=>{const ed=editId('poll');upsert('poll',ed?{question:d.question.trim()}:{question:d.question.trim(),answers:[]});commit(ed?'تم حفظ التعديل':'تمت إضافة السؤال')});
 db.polls.forEach(p=>bind('answer-'+p.id,d=>{const a=p.answers.find(a=>a.teacher===d.teacher);if(a)a.answer=d.answer;else p.answers.push({teacher:d.teacher,answer:d.answer});commit('تم حفظ الإجابة')}));
 document.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>{const t=db.tasks.find(t=>t.id===b.dataset.done);t.done=!t.done;commit(t.done?'سُجّل إنجاز المهمة':'أُعيد فتح المهمة')});
@@ -330,11 +331,12 @@ fillEditing();enhanceTables();
 }
 function generateSchedule(){
  const result=[],failed=[],tDays=id=>teacherDays(db.teachers.find(t=>t.id===id));
- const busy=(day,slot,c)=>result.some(x=>x.day===day&&x.slot===slot&&(x.teacher===c.teacher||roomKey(x.room)===roomKey(c.room)));
+ const busy=(day,slot,c)=>result.some(x=>x.day===day&&x.slot===slot&&(x.teacher===c.teacher||!!c.room&&roomKey(x.room)===roomKey(c.room)));
  // most constrained first: fewest available days, then most sessions
  const courses=[...db.courses].sort((a,b)=>tDays(a.teacher).length-tDays(b.teacher).length||b.sessions-a.sessions);
  for(const c of courses){
   const days=tDays(c.teacher);
+  if(!c.teacher){failed.push(c.title+' (بلا تدريسي)');continue}
   if(!days.length){failed.push(c.title+' (التدريسي بلا أيام تواجد)');continue}
   for(let i=0;i<c.sessions;i++){
    let best=null;
@@ -348,7 +350,7 @@ function generateSchedule(){
  result.sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day)||SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot));
  db.schedule=result;db.scheduleStale=false;scheduleFilter='';
  const fails=[...new Set(failed)].map(f=>f+(failed.filter(x=>x===f).length>1?' ×'+failed.filter(x=>x===f).length:''));
- scheduleMsg=failed.length?['warn','أُدرجت '+result.length+' حصة، وتعذر إدراج '+failed.length+': '+fails.join('، ')+'. وسّع أيام التواجد أو راجع القاعات.']:['ok','تم توليد '+result.length+' حصة دون تعارض تدريسي أو قاعة.'];
+ scheduleMsg=failed.length?['warn','أُدرجت '+result.length+' حصة، وتعذر إدراج '+failed.length+': '+fails.join('، ')+'. حدّد التدريسي وأيام تواجده أو راجع القاعات.']:['ok','تم توليد '+result.length+' حصة دون تعارض تدريسي أو قاعة.'];
  save();render();
 }
 function action(a){
