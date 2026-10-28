@@ -109,6 +109,25 @@ a{color:var(--primary)}a.button{color:var(--primary-ink)}
 footer{font-size:12px;color:var(--muted);margin:28px 0}
 .overlay{display:none}
 #modeBadge.ok{background:var(--ok-soft);color:var(--ok)}#modeBadge.warn{background:var(--warn-soft);color:var(--warn)}#modeBadge.danger{background:var(--danger-soft);color:var(--danger)}
+.com-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px}
+.com-card{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--surface-2);display:grid;gap:12px;align-content:start;transition:box-shadow .15s,border-color .15s}
+.com-card:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.com-card.mine{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.com-card header{display:flex;align-items:flex-start;gap:10px}
+.com-card header>div{flex:1;min-width:0}
+.com-card h3{margin:0;font-size:16px}
+.com-card header small{color:var(--muted)}
+.com-ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--primary-soft);font-size:20px}
+.com-chair{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,#e5b94f 14%,var(--surface));border:1px solid color-mix(in srgb,#e5b94f 35%,transparent)}
+.com-chair small{display:block;color:var(--muted);font-size:12px}
+.com-members{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.com-members li{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:14px}
+.avatar{--h:160;flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;color:hsl(var(--h) 55% 28%);background:hsl(var(--h) 60% 88%)}
+.avatar.lg{width:42px;height:42px;font-size:14px}
+:root[data-theme="dark"] .avatar{color:hsl(var(--h) 60% 85%);background:hsl(var(--h) 35% 26%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .avatar{color:hsl(var(--h) 60% 85%);background:hsl(var(--h) 35% 26%)}}
+.com-mission summary{cursor:pointer;color:var(--primary);font-size:14px}
+.com-mission p{margin:6px 0 0;color:var(--muted)}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -408,7 +427,18 @@ function tasksView(){
 }
 function committeesView(){
  return (isAdmin()?section(formTitle('committee','تشكيل لجنة','تعديل اللجنة'),db.teachers.length?form('committee',field('title','اسم اللجنة')+teacherField('chair','رئيس اللجنة',false)+'<fieldset class="full"><legend>أعضاء اللجنة</legend>'+checks('members',db.teachers.map(t=>[t.id,t.name]))+'</fieldset><label class="full">مهام اللجنة<textarea name="mission"></textarea></label>','تشكيل اللجنة'):'<p class="empty">أضف التدريسيين أولاً.</p>'):'')
- +section('اللجان',db.committees.map(c=>'<div class="item"><div class="item-head"><h3>'+esc(c.title)+'</h3>'+actions('committee',c.id)+'</div><p><b>الرئيس:</b> '+esc(name(c.chair))+'</p><p><b>الأعضاء ('+c.members.length+'):</b> '+esc(c.members.map(name).join('، '))+'</p><p class="pre muted">'+esc(c.mission)+'</p></div>').join('')||'<p class="empty">لا توجد لجان</p>');
+ +section('اللجان ('+db.committees.length+')',db.committees.length?'<div class="com-grid">'+db.committees.map(committeeCard).join('')+'</div>':'<p class="empty">لا توجد لجان</p>');
+}
+// أول حرفين من الاسم دون الألقاب، ولون ثابت لكل تدريسي
+function initials(n){const w=String(n||'').replace(/^(د|أ|ا|م|م\.م|أ\.د|أ\.م\.د)\.\s*/,'').split(/\s+/).filter(Boolean);return w.length>1?w[0][0]+' '+w.at(-1).replace(/^ال(?=..)/,'')[0]:w[0]?.[0]||'؟'}
+function avatar(id,cls=''){let h=0;for(const ch of String(id))h=(h*31+ch.charCodeAt(0))%360;return '<span class="avatar '+cls+'" style="--h:'+h+'" aria-hidden="true">'+esc(initials(name(id)))+'</span>'}
+function committeeCard(c){
+ const members=c.members.filter(m=>m!==c.chair),mine=person&&(c.chair===person||c.members.includes(person)),count=members.length+(c.chair?1:0);
+ return '<article class="com-card'+(mine?' mine':'')+'"><header><span class="com-ic">👥</span><div><h3>'+esc(c.title)+'</h3><small>'+(count===1?'عضو واحد':count===2?'عضوان':count+' '+(count<11?'أعضاء':'عضواً'))+(mine?' · '+pill('ok',c.chair===person?'أنت رئيسها':'أنت عضو'):'')+'</small></div>'+actions('committee',c.id)+'</header>'
+  +(c.chair?'<div class="com-chair">'+avatar(c.chair,'lg')+'<div><small>👑 رئيس اللجنة</small><b>'+esc(name(c.chair))+'</b></div></div>':'')
+  +(members.length?'<ul class="com-members">'+members.map(m=>'<li>'+avatar(m)+'<span>'+esc(name(m))+'</span></li>').join('')+'</ul>':'')
+  +(c.mission?'<details class="com-mission"><summary>مهام اللجنة</summary><p class="pre">'+esc(c.mission)+'</p></details>':'')
+  +'</article>';
 }
 function pollsView(){
  return (isAdmin()?section(formTitle('poll','طرح سؤال','تعديل السؤال'),form('poll',field('question','السؤال','text',true,'full'),'إضافة السؤال')):'')
