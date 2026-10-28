@@ -102,7 +102,14 @@ details.unread summary{cursor:pointer;color:var(--muted);font-size:13px}
 a{color:var(--primary)}a.button{color:var(--primary-ink)}
 footer{font-size:12px;color:var(--muted);margin:28px 0}
 .overlay{display:none}
+#modeBadge.ok{background:var(--ok-soft);color:var(--ok)}#modeBadge.warn{background:var(--warn-soft);color:var(--warn)}#modeBadge.danger{background:var(--danger-soft);color:var(--danger)}
+.who{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.gate{max-width:560px;margin:8vh auto;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px 26px;box-shadow:var(--shadow)}
+.gate h2{font-size:22px;margin-bottom:12px}
+.gate .google{display:inline-flex;align-items:center;gap:10px;padding:12px 22px;font-size:15px;margin-top:8px}
+#syncBar{position:fixed;bottom:22px;right:50%;transform:translateX(50%);background:var(--side);color:#fff;border-radius:12px;padding:10px 14px;display:none;gap:12px;align-items:center;z-index:39;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 @media(max-width:900px){
+ .who span{display:none}
  aside{transform:translateX(100%);transition:transform .2s;width:270px;box-shadow:-8px 0 30px rgba(0,0,0,.25)}
  body.nav-open aside{transform:none}
  body.nav-open .overlay{display:block;position:fixed;inset:0;background:#0006;z-index:15}
@@ -119,9 +126,10 @@ footer{font-size:12px;color:var(--muted);margin:28px 0}
 <body>
 <aside id="sidebar"><div class="brand"><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
 <div class="overlay" id="overlay"></div>
-<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="فتح القائمة">☰</button><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge">نسخة تجريبية · حفظ محلي</span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
-<details class="notice"><summary>نسخة تجريبية: البيانات محفوظة على هذا المتصفح فقط</summary><p>لا تتزامن البيانات بين الأجهزة، فصدّر نسخة احتياطية دورياً. تبديل العرض إلى «تدريسي» للتجربة وليس تسجيل دخول أو صلاحيات آمنة. الملفات المرفقة تُسجّل أسماؤها فقط ولا تُرفع إلى خادم.</p></details>
-<div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div>
+<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="فتح القائمة">☰</button><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
+<details class="notice" id="notice"><summary id="noticeSummary">نسخة تجريبية: البيانات محفوظة على هذا المتصفح فقط</summary><p id="noticeText">لا تتزامن البيانات بين الأجهزة، فصدّر نسخة احتياطية دورياً. تبديل العرض إلى «تدريسي» للتجربة وليس تسجيل دخول أو صلاحيات آمنة. الملفات المرفقة تُسجّل أسماؤها فقط ولا تُرفع إلى خادم.</p></details>
+<div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
+<script src="firebase-config.js"></script>
 <script>
 'use strict';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -132,6 +140,12 @@ const initial={teachers:[],announcements:[],courses:[],schedule:[],invigilation:
 let db;try{db=JSON.parse(localStorage.getItem(key))||structuredClone(initial)}catch{db=structuredClone(initial)}
 for(const k in initial)if(!Array.isArray(db[k]))db[k]=[];
 let page=0,role='admin',person='',editing=null,scheduleFilter='',scheduleMsg=null,toastTimer;
+const CORE=['teachers','announcements','courses','invigilation','tasks','committees','polls'];
+const TEACHER_PAGES=[0,2,3,4,5,6,7];
+const DOMAIN=window.ALLOWED_DOMAIN||'uomosul.edu.iq';
+const cloud={on:!!window.FIREBASE_CONFIG,user:null,admins:null,admin:false,teacherId:'',ready:false,dirty:false,raw:{},shadow:{},loaded:new Set(),unsubs:[],wlUnsub:null};
+const localData=db;
+const isAdmin=()=>cloud.on?cloud.admin:true;
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 const SLOTS=['08:30 – 10:00','10:00 – 11:30','11:30 – 13:00','13:00 – 14:30'];
 const RANKS=['استاذ','استاذ مساعد','مدرس','مدرس مساعد'];
@@ -143,7 +157,8 @@ const teacherDays=t=>splitList(t?.days).filter(d=>DAYS.includes(d));
 const roomKey=s=>String(s??'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\s+/g,'').toLowerCase();
 const editId=f=>editing?.form===f?editing.id:null;
 const opts=()=>db.teachers.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('');
-function save(){try{localStorage.setItem(key,JSON.stringify(db));return true}catch{toast('تعذر الحفظ؛ صدّر نسخة احتياطية من بياناتك');return false}}
+function stamp(){let n=Date.now();for(const k of [...CORE,'workloads'])(db[k]||[]).forEach(r=>{if(r.createdAt==null)r.createdAt=n++})}
+function save(){stamp();if(cloud.on){queuePush();return true}try{localStorage.setItem(key,JSON.stringify(db));return true}catch{toast('تعذر الحفظ؛ صدّر نسخة احتياطية من بياناتك');return false}}
 function toast(t){const el=$('#toast');el.textContent=t;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',3500)}
 function commit(msg){save();render();if(msg)toast(msg)}
 function field(n,title,type='text',required=true,cls=''){return '<label'+(cls?' class="'+cls+'"':'')+'>'+title+'<input name="'+n+'" type="'+type+'" '+(required?'required':'')+(type==='number'?' min="1" step="1"':'')+'></label>'}
@@ -154,7 +169,7 @@ function pill(type,text){return '<span class="pill '+type+'">'+text+'</span>'}
 function table(headers,rows){return rows.length?'<div class="scroll"><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="empty">لا توجد سجلات بعد. أضف أول سجل للبدء.</p>'}
 function form(id,body,button='حفظ'){const ed=editing?.form===id;return '<form id="'+id+'">'+body+'<div class="form-actions"><button>'+(ed?'حفظ التعديل':button)+'</button>'+(ed?'<button type="button" class="secondary" data-cancel>إلغاء التعديل</button>':'')+'</div></form>'}
 function section(title,body){return '<section><h2>'+title+'</h2>'+body+'</section>'}
-function actions(f,id){return '<span class="row-actions"><button class="btn-sm secondary" data-edit="'+f+'|'+id+'">تعديل</button><button class="btn-sm ghost-danger" data-del="'+f+'|'+id+'">حذف</button></span>'}
+function actions(f,id){if(!isAdmin())return '';return '<span class="row-actions"><button class="btn-sm secondary" data-edit="'+f+'|'+id+'">تعديل</button><button class="btn-sm ghost-danger" data-del="'+f+'|'+id+'">حذف</button></span>'}
 function formTitle(f,add,edit){return editing?.form===f?edit:add}
 function overdue(t){return !t.done&&t.due<today()}
 function upsert(f,rec){const col=COLS[f],id=editId(f);if(id){const i=db[col].findIndex(x=>x.id===id);db[col][i]={...db[col][i],...rec}}else db[col].push({id:uid(),...rec});editing=null}
@@ -172,17 +187,29 @@ function download(file,text,type){const a=document.createElement('a');a.href=URL
 function bind(id,fn){const f=document.getElementById(id);if(f)f.onsubmit=e=>{e.preventDefault();fn(Object.fromEntries(new FormData(f)),f)}}
 
 function dashboard(){
+ if(!isAdmin())return teacherDashboard();
+ const localCount=CORE.reduce((s,k)=>s+(localData[k]?.length||0),0);
+ const migrate=cloud.on&&!CORE.some(c=>db[c].length)&&localCount?'<div class="alert ok"><span>توجد على هذا المتصفح بيانات محلية سابقة ('+localCount+' سجل). يمكنك رفعها إلى قاعدة البيانات المشتركة.</span><button data-action="migrate">رفع البيانات إلى السحابة</button></div>':'';
  const late=db.tasks.filter(overdue),noDays=db.teachers.filter(t=>!teacherDays(t).length),open=db.tasks.filter(t=>!t.done);
  const cards=[[1,'التدريسيون',db.teachers.length,''],[2,'التبليغات',db.announcements.length,''],[5,'المهام المتأخرة',late.length,late.length?'danger':''],[6,'اللجان',db.committees.length,'']];
  const alerts=[];
  if(late.length)alerts.push(['danger',late.length+' مهمة متأخرة عن موعدها',5,'عرض التكليفات']);
  if(noDays.length)alerts.push(['warn',noDays.length+' تدريسي بلا أيام تواجد؛ لن تُدرج موادهم في الجدول',1,'استكمال البيانات']);
  if(db.scheduleStale&&db.schedule.length)alerts.push(['warn','تغيّرت المواد أو التدريسيون بعد آخر توليد للجدول',3,'إعادة التوليد']);
- return '<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
+ return migrate+'<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
  +alerts.map(([c,t,p,l])=>'<div class="alert '+c+'"><span>'+t+'</span><button data-page="'+p+'">'+l+'</button></div>').join('')
  +(db.teachers.length?'':section('ابدأ بإعداد القسم','<p>أضف التدريسيين وأيام تواجدهم، ثم أدخل المواد لتوليد جدول أولي يراعي تعارض التدريسي والقاعة. يمكنك أيضاً استيراد قائمة التدريسيين من Excel.</p><div class="tools"><button data-page="1">إضافة التدريسيين</button><button class="secondary" data-page="9">استيراد من Excel</button></div>'))
  +'<div class="grid">'+section('متابعة التكليفات',open.sort((a,b)=>String(a.due).localeCompare(b.due)).slice(0,6).map(t=>'<div class="item"><strong>'+esc(t.title)+'</strong><div class="muted">'+esc(name(t.teacher))+' · '+esc(t.due)+' '+(overdue(t)?pill('danger','متأخرة'):'')+'</div></div>').join('')||'<p class="empty">لا توجد مهام معلقة</p>')
  +section('آخر التبليغات',db.announcements.slice(-4).reverse().map(a=>'<div class="item"><strong>'+esc(a.title)+'</strong><div class="muted">'+esc(a.date)+' · '+readPill(a)+'</div></div>').join('')||'<p class="empty">لا توجد تبليغات</p>')+'</div>';
+}
+function teacherDashboard(){
+ if(!person)return section('حسابك غير مرتبط بسجل تدريسي','<p>سجّلت الدخول بـ <b dir="ltr">'+esc(cloud.user?.email)+'</b>، لكن لا يوجد تدريسي بهذا البريد في دليل القسم. اطلب من رئيس القسم إضافة بريدك إلى سجلك، وستظهر لك تبليغاتك ومهامك.</p>');
+ const unread=db.announcements.filter(a=>!a.read.includes(person)).reverse(),mine=db.tasks.filter(t=>t.teacher===person&&!t.done),inv=db.invigilation.filter(x=>x.teacher===person&&x.date>=today()).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)),com=db.committees.filter(c=>c.chair===person||c.members.includes(person)),lessons=db.schedule.filter(s=>s.teacher===person).length;
+ const cards=[[2,'تبليغات غير مقروءة',unread.length,unread.length?'danger':''],[5,'مهامي المفتوحة',mine.length,mine.some(overdue)?'danger':''],[4,'مراقباتي القادمة',inv.length,''],[3,'حصصي الأسبوعية',lessons,'']];
+ return '<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
+ +'<div class="grid">'+section('تبليغات بانتظار تأكيدك',unread.map(a=>'<div class="item"><strong>'+esc(a.title)+'</strong><p class="pre">'+esc(a.body)+'</p><button class="btn-sm" data-read="'+a.id+'">تأكيد القراءة</button></div>').join('')||'<p class="empty">قرأت كل التبليغات</p>')
+ +section('مراقباتي القادمة',inv.map(x=>'<div class="item"><strong>'+esc(x.exam)+'</strong><div class="muted">'+esc(x.date)+' · <span dir="ltr">'+esc(x.start)+' – '+esc(x.end)+'</span> · '+esc(x.room)+'</div></div>').join('')||'<p class="empty">لا توجد مراقبات قادمة</p>')+'</div>'
+ +section('مهامي ولجاني',mine.map(t=>'<div class="item"><strong>'+esc(t.title)+'</strong> <span class="muted">· '+esc(t.due)+'</span> '+(overdue(t)?pill('danger','متأخرة'):'')+'</div>').join('')+com.map(c=>'<div class="item"><strong>'+esc(c.title)+'</strong> '+pill('info',c.chair===person?'رئيس اللجنة':'عضو')+'</div>').join('')||'<p class="empty">لا توجد مهام أو لجان</p>');
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
@@ -195,9 +222,9 @@ function announcementsView(){
   const unread=db.teachers.filter(t=>!a.read.includes(t.id));
   return '<article class="item"><div class="item-head"><h3>'+esc(a.title)+'</h3>'+(admin?actions('announcement',a.id):'')+'</div><p class="pre">'+esc(a.body)+'</p><p class="muted">'+esc(a.date)+(a.file?' · مرفق مسجل: '+esc(a.file):'')+'</p>'
   +(admin?readPill(a)+(unread.length&&db.teachers.length?'<details class="unread"><summary>لم يؤكد القراءة ('+unread.length+')</summary><p class="muted">'+unread.map(t=>esc(t.name)).join('، ')+'</p></details>':'')
-   :person?(a.read.includes(person)?pill('ok','تمت القراءة'):'<button class="btn-sm" data-read="'+a.id+'">تأكيد القراءة</button>'):'<span class="muted">اختر التدريسي لتأكيد القراءة</span>')+'</article>';
+   :person?(a.read.includes(person)?pill('ok','تمت القراءة'):'<button class="btn-sm" data-read="'+a.id+'">تأكيد القراءة</button>'):'<span class="muted">'+(cloud.on?'حسابك غير مرتبط بسجل تدريسي':'اختر التدريسي لتأكيد القراءة')+'</span>')+'</article>';
  }).join('');
- return section('طريقة العرض','<p class="muted">جرّب كيف يرى التدريسي التبليغات ويؤكد قراءتها. هذا عرض تجريبي وليس تسجيل دخول.</p><div class="tools"><label>نوع العرض<select id="role"><option value="admin">رئيس القسم</option><option value="teacher">تدريسي</option></select></label>'+(admin?'':'<label>التدريسي<select id="person"><option value="">اختر التدريسي</option>'+opts()+'</select></label>')+'</div>')
+ return (cloud.on?'':section('طريقة العرض','<p class="muted">جرّب كيف يرى التدريسي التبليغات ويؤكد قراءتها. هذا عرض تجريبي وليس تسجيل دخول.</p><div class="tools"><label>نوع العرض<select id="role"><option value="admin">رئيس القسم</option><option value="teacher">تدريسي</option></select></label>'+(admin?'':'<label>التدريسي<select id="person"><option value="">اختر التدريسي</option>'+opts()+'</select></label>')+'</div>'))
  +(admin?section(formTitle('announcement','إنشاء تبليغ','تعديل التبليغ'),form('announcement',field('title','عنوان التبليغ','text',true,'full')+'<label class="full">نص التبليغ<textarea name="body" required></textarea></label>'+field('file','مرفق (يُسجَّل الاسم فقط)','file',false),'نشر التبليغ')):'')
  +section('سجل التبليغات',list||'<p class="empty">لا توجد تبليغات</p>');
 }
@@ -207,33 +234,33 @@ function weekGrid(items){
 function coursesView(){
  const rooms=[...new Map(db.schedule.map(s=>[roomKey(s.room),s.room])).entries()],tids=[...new Set(db.schedule.map(s=>s.teacher))];
  const shown=db.schedule.filter(s=>!scheduleFilter||(scheduleFilter.startsWith('t:')?s.teacher===scheduleFilter.slice(2):roomKey(s.room)===scheduleFilter.slice(2)));
- return section(formTitle('course','المواد الدراسية','تعديل مادة'),form('course',field('title','اسم المادة')+teacherField()+field('sessions','عدد الحصص الأسبوعية','number')+field('room','القاعة'),'إضافة المادة')
+ return section(formTitle('course','المواد الدراسية','تعديل مادة'),(isAdmin()?form('course',field('title','اسم المادة')+teacherField()+field('sessions','عدد الحصص الأسبوعية','number')+field('room','القاعة'),'إضافة المادة'):'')
   +table(['المادة','التدريسي','الحصص','القاعة',''],db.courses.map(c=>[esc(c.title),esc(name(c.teacher))+(teacherDays(db.teachers.find(t=>t.id===c.teacher)).length?'':' '+pill('warn','بلا أيام تواجد')),esc(c.sessions),esc(c.room),actions('course',c.id)])))
  +section('الجدول الأسبوعي','<p class="muted">خمسة أيام × أربع فترات، والحصة = فترة واحدة. يمنع تعارض التدريسي والقاعة، ويراعي أيام التواجد، ويوزّع حصص المادة الواحدة على أيام مختلفة قدر الإمكان.</p>'
   +(db.scheduleStale&&db.schedule.length?'<div class="alert warn"><span>تغيّرت المواد أو التدريسيون بعد آخر توليد. أعد توليد الجدول.</span></div>':'')
-  +'<div class="tools"><button data-action="generate">توليد الجدول</button><button class="secondary" data-action="csvSchedule">تصدير CSV</button><button class="secondary" data-action="print">طباعة / PDF</button></div>'
+  +'<div class="tools">'+(isAdmin()?'<button data-action="generate">توليد الجدول</button>':'')+'<button class="secondary" data-action="csvSchedule">تصدير CSV</button><button class="secondary" data-action="print">طباعة / PDF</button></div>'
   +(scheduleMsg?'<div class="alert '+scheduleMsg[0]+'" role="status"><span>'+esc(scheduleMsg[1])+'</span></div>':'')
   +(db.schedule.length?'<div class="tools"><label>عرض<select id="scheduleFilter"><option value="">كل الجدول</option><optgroup label="حسب التدريسي">'+tids.map(id=>'<option value="t:'+esc(id)+'">'+esc(name(id))+'</option>').join('')+'</optgroup><optgroup label="حسب القاعة">'+rooms.map(([k,r])=>'<option value="r:'+esc(k)+'">'+esc(r)+'</option>').join('')+'</optgroup></select></label></div>'+weekGrid(shown):'<p class="empty">لم يُولَّد جدول بعد.</p>'));
 }
 function invigilationView(){
- return section(formTitle('invigilation','إضافة مراقبة امتحانية','تعديل مراقبة'),form('invigilation',field('exam','الامتحان')+teacherField()+field('date','التاريخ','date')+field('start','البداية','time')+field('end','النهاية','time')+field('room','القاعة'),'إضافة المراقبة')+'<p class="muted">يُفحص تداخل مراقبات التدريسي وحجز القاعة في اليوم والوقت نفسيهما.</p>')
+ return (isAdmin()?section(formTitle('invigilation','إضافة مراقبة امتحانية','تعديل مراقبة'),form('invigilation',field('exam','الامتحان')+teacherField()+field('date','التاريخ','date')+field('start','البداية','time')+field('end','النهاية','time')+field('room','القاعة'),'إضافة المراقبة')+'<p class="muted">يُفحص تداخل مراقبات التدريسي وحجز القاعة في اليوم والوقت نفسيهما.</p>'):'')
  +section('جدول المراقبات',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),esc(name(x.teacher)),esc(x.date),'<span dir="ltr">'+esc(x.start)+' – '+esc(x.end)+'</span>',esc(x.room),actions('invigilation',x.id)])));
 }
 function tasksView(){
- return section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('due','آخر موعد','date'),'إضافة التكليف'))
- +section('التكليفات',table(['المهمة','التدريسي','الموعد','الحالة',''],db.tasks.slice().sort((a,b)=>(a.done-b.done)||String(a.due).localeCompare(b.due)).map(t=>[esc(t.title),esc(name(t.teacher)),esc(t.due),t.done?pill('ok','مكتملة'):overdue(t)?pill('danger','متأخرة'):pill('info','قيد الإنجاز'),'<span class="row-actions"><button class="btn-sm" data-done="'+t.id+'">'+(t.done?'إعادة فتح':'تسجيل الإنجاز')+'</button>'+actions('task',t.id)+'</span>'])));
+ return (isAdmin()?section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('due','آخر موعد','date'),'إضافة التكليف')):'')
+ +section(isAdmin()?'التكليفات':'مهامي',table(['المهمة','التدريسي','الموعد','الحالة',''],db.tasks.filter(t=>isAdmin()||t.teacher===person).sort((a,b)=>(a.done-b.done)||String(a.due).localeCompare(b.due)).map(t=>[esc(t.title),esc(name(t.teacher)),esc(t.due),t.done?pill('ok','مكتملة'):overdue(t)?pill('danger','متأخرة'):pill('info','قيد الإنجاز'),(isAdmin()?'<span class="row-actions"><button class="btn-sm" data-done="'+t.id+'">'+(t.done?'إعادة فتح':'تسجيل الإنجاز')+'</button>'+actions('task',t.id)+'</span>':'')])));
 }
 function committeesView(){
- return section(formTitle('committee','تشكيل لجنة','تعديل اللجنة'),db.teachers.length?form('committee',field('title','اسم اللجنة')+teacherField('chair','رئيس اللجنة')+'<fieldset class="full"><legend>أعضاء اللجنة</legend>'+checks('members',db.teachers.map(t=>[t.id,t.name]))+'</fieldset><label class="full">مهام اللجنة<textarea name="mission" required></textarea></label>','تشكيل اللجنة'):'<p class="empty">أضف التدريسيين أولاً.</p>')
+ return (isAdmin()?section(formTitle('committee','تشكيل لجنة','تعديل اللجنة'),db.teachers.length?form('committee',field('title','اسم اللجنة')+teacherField('chair','رئيس اللجنة')+'<fieldset class="full"><legend>أعضاء اللجنة</legend>'+checks('members',db.teachers.map(t=>[t.id,t.name]))+'</fieldset><label class="full">مهام اللجنة<textarea name="mission" required></textarea></label>','تشكيل اللجنة'):'<p class="empty">أضف التدريسيين أولاً.</p>'):'')
  +section('اللجان',db.committees.map(c=>'<div class="item"><div class="item-head"><h3>'+esc(c.title)+'</h3>'+actions('committee',c.id)+'</div><p><b>الرئيس:</b> '+esc(name(c.chair))+'</p><p><b>الأعضاء ('+c.members.length+'):</b> '+esc(c.members.map(name).join('، '))+'</p><p class="pre muted">'+esc(c.mission)+'</p></div>').join('')||'<p class="empty">لا توجد لجان</p>');
 }
 function pollsView(){
- return section(formTitle('poll','طرح سؤال','تعديل السؤال'),form('poll',field('question','السؤال','text',true,'full'),'إضافة السؤال'))
- +section('الأسئلة والإجابات',db.polls.map(p=>'<div class="item"><div class="item-head"><h3>'+esc(p.question)+'</h3>'+actions('poll',p.id)+'</div><p class="muted">'+p.answers.length+' إجابة من '+db.teachers.length+' تدريسي</p>'+form('answer-'+p.id,teacherField()+field('answer','الإجابة'),'حفظ الإجابة')+table(['التدريسي','الإجابة'],p.answers.map(a=>[esc(name(a.teacher)),esc(a.answer)]))+'</div>').join('')||'<p class="empty">لا توجد أسئلة</p>');
+ return (isAdmin()?section(formTitle('poll','طرح سؤال','تعديل السؤال'),form('poll',field('question','السؤال','text',true,'full'),'إضافة السؤال')):'')
+ +section('الأسئلة والإجابات',db.polls.map(p=>'<div class="item"><div class="item-head"><h3>'+esc(p.question)+'</h3>'+actions('poll',p.id)+'</div><p class="muted">'+p.answers.length+' إجابة من '+db.teachers.length+' تدريسي</p>'+(isAdmin()?form('answer-'+p.id,teacherField()+field('answer','الإجابة'),'حفظ الإجابة'):person?form('answer-'+p.id,'<input type="hidden" name="teacher" value="'+esc(person)+'">'+field('answer','إجابتك'),'حفظ إجابتي'):'')+table(['التدريسي','الإجابة'],p.answers.map(a=>[esc(name(a.teacher)),esc(a.answer)]))+'</div>').join('')||'<p class="empty">لا توجد أسئلة</p>');
 }
 function backupView(){
  const n=Object.keys(initial).reduce((s,k)=>s+db[k].length,0)+(db.workloads||[]).length;
- return section('حماية بيانات المتصفح','<p>البيانات الحالية: '+n+' سجل. صدّر نسخة JSON دورياً واحفظها خارج المتصفح. الاستيراد يستبدل بيانات هذا المتصفح بعد تأكيدك.</p><div class="tools"><button data-action="backup">تنزيل نسخة احتياطية</button></div>'+form('restore',field('file','استيراد نسخة JSON','file'),'استيراد')+'<p class="muted">لا تُخزّن بيانات حساسة في النسخة التجريبية. لا يتضمن المشروع حسابات أو قاعدة بيانات مشتركة.</p>');
+ return section('حماية بيانات المتصفح','<p>البيانات الحالية: '+n+' سجل. صدّر نسخة JSON دورياً واحفظها خارج المتصفح. '+(cloud.on?'الاستيراد يستبدل البيانات المشتركة لكل المستخدمين بعد تأكيدك.':'الاستيراد يستبدل بيانات هذا المتصفح بعد تأكيدك.')+'</p><div class="tools"><button data-action="backup">تنزيل نسخة احتياطية</button></div>'+form('restore',field('file','استيراد نسخة JSON','file'),'استيراد')+''+(cloud.on?'':'<p class="muted">لا تُخزّن بيانات حساسة في النسخة التجريبية. لا يتضمن الحفظ المحلي حسابات أو قاعدة بيانات مشتركة.</p>')+'');
 }
 function fillEditing(){
  if(!editing)return;const f=document.getElementById(editing.form),rec=db[COLS[editing.form]]?.find(x=>x.id===editing.id);
@@ -246,11 +273,15 @@ function enhanceTables(){
   const i=document.createElement('input');i.type='search';i.className='table-search';i.placeholder='بحث في الجدول…';i.setAttribute('aria-label','بحث في الجدول');
   i.oninput=()=>{const q=i.value.trim();for(const r of tb.rows)r.hidden=!!q&&!r.textContent.includes(q)};w.before(i)});
 }
-function go(p){page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');render();scrollTo(0,0)}
+function go(p){if(!isAdmin()&&!TEACHER_PAGES.includes(p))p=0;if(!isAdmin()&&p===3&&person&&!scheduleFilter)scheduleFilter='t:'+person;page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');render();scrollTo(0,0)}
 function render(){
-$('#nav').innerHTML=navGroups.map(([g,ix])=>'<div class="nav-group"><span>'+g+'</span>'+ix.map(i=>'<button data-page="'+i+'"'+(page===i?' class="active" aria-current="page"':'')+'>'+pages[i]+'</button>').join('')+'</div>').join('');
+if(cloud.on&&!cloud.ready)return;
+cloud.dirty=false;$('#syncBar').style.display='none';
+if(!isAdmin()&&!TEACHER_PAGES.includes(page))page=0;
+updateWho();
+$('#nav').innerHTML=navGroups.map(([g,ix])=>[g,ix.filter(i=>isAdmin()||TEACHER_PAGES.includes(i))]).filter(([,ix])=>ix.length).map(([g,ix])=>'<div class="nav-group"><span>'+g+'</span>'+ix.map(i=>'<button data-page="'+i+'"'+(page===i?' class="active" aria-current="page"':'')+'>'+pages[i]+'</button>').join('')+'</div>').join('');
 $('#title').textContent=pages[page];document.title=pages[page]+' · رئاسة القسم الذكية';
-const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,adminView,workloadView];
+const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,()=>adminsSection()+adminView(),workloadView];
 $('#view').innerHTML=views[page]();
 if(page===9)bindAdmin();
 if(page===10)bindWorkload();
@@ -285,7 +316,9 @@ document.querySelectorAll('[data-read]').forEach(b=>b.onclick=()=>{const a=db.an
 if($('#role')){$('#role').value=role;$('#role').onchange=e=>{role=e.target.value;editing=null;render()}}
 if($('#person')){$('#person').value=person;$('#person').onchange=e=>{person=e.target.value;render()}}
 if($('#scheduleFilter')){$('#scheduleFilter').value=scheduleFilter;$('#scheduleFilter').onchange=e=>{scheduleFilter=e.target.value;render()}}
-bind('restore',async(d,f)=>{try{const x=JSON.parse(await f.elements.file.files[0].text());for(const k in initial)if(!Array.isArray(x[k]))throw Error();if(!x.teachers.every(t=>typeof t.id==='string'&&typeof t.name==='string'&&typeof (t.days??'')==='string')||!x.announcements.every(a=>Array.isArray(a.read))||!x.committees.every(c=>Array.isArray(c.members))||!x.polls.every(p=>Array.isArray(p.answers)))throw Error();if(confirm('استبدال بيانات هذا المتصفح بالنسخة المختارة؟')){db=x;db.workloads=Array.isArray(db.workloads)?db.workloads:[];db.workloadMeta=db.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};editing=null;commit('تم الاستيراد')}}catch{toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}});
+bind('restore',async(d,f)=>{try{const x=JSON.parse(await f.elements.file.files[0].text());for(const k in initial)if(!Array.isArray(x[k]))throw Error();if(!x.teachers.every(t=>typeof t.id==='string'&&typeof t.name==='string'&&typeof (t.days??'')==='string')||!x.announcements.every(a=>Array.isArray(a.read))||!x.committees.every(c=>Array.isArray(c.members))||!x.polls.every(p=>Array.isArray(p.answers)))throw Error();if(confirm(cloud.on?'استبدال البيانات المشتركة لكل المستخدمين بالنسخة المختارة؟':'استبدال بيانات هذا المتصفح بالنسخة المختارة؟')){db=x;db.workloads=Array.isArray(db.workloads)?db.workloads:[];db.workloadMeta=db.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};editing=null;commit('تم الاستيراد')}}catch{toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}});
+bind('adminForm',d=>{const e=d.email.trim().toLowerCase();if(!e.endsWith('@'+DOMAIN))return toast('يجب أن يكون البريد من نطاق '+DOMAIN);if(cloud.admins.includes(e))return toast('الحساب مشرف مسبقاً');setAdmins([...cloud.admins,e])});
+document.querySelectorAll('[data-admin-del]').forEach(b=>b.onclick=()=>{const e=b.dataset.adminDel;if(e===cloud.user.email.toLowerCase()&&!confirm('ستفقد صلاحية الإدارة بإزالة حسابك. متابعة؟'))return;setAdmins(cloud.admins.filter(x=>x!==e))});
 fillEditing();enhanceTables();
 }
 function generateSchedule(){
@@ -315,6 +348,7 @@ function action(a){
 if(a==='csvTeachers')csv('teachers');if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
 if(a==='backup')download('smart-department-backup-'+today()+'.json',JSON.stringify(db,null,2),'application/json');
 if(a==='generate'){if(!db.courses.length)return toast('أضف المواد أولاً');generateSchedule()}
+if(a==='migrate'&&confirm('رفع البيانات المحلية من هذا المتصفح إلى قاعدة البيانات المشتركة؟')){const x=structuredClone(localData);for(const k of CORE)db[k]=x[k]||[];db.schedule=x.schedule||[];db.scheduleStale=!!x.scheduleStale;db.workloads=x.workloads||[];db.workloadMeta=x.workloadMeta||db.workloadMeta;commit('جارٍ رفع البيانات إلى السحابة')}
 }
 
 let importRows=[],importBook=null,importMessage='';
@@ -353,8 +387,7 @@ function showExcelPreview(){
  const b=document.getElementById('excelCommit');if(b)b.onclick=()=>{
  const checked=validateTeacherRows([teacherColumns,...valid.map(r=>[r.name,r.days,r.rank,r.specialty,r.email,r.phone])]).filter(r=>!r.error);
  const teachers=checked.map(({row,error,...t})=>({...t,id:uid()})),next={...db,teachers:[...db.teachers,...teachers]};
- try{localStorage.setItem(key,JSON.stringify(next))}catch{return toast('تعذر الحفظ؛ لم تُعتمد البيانات')}
- db=next;importRows=[];importBook=null;importMessage='تمت إضافة '+teachers.length+' تدريسي بنجاح';render();toast(importMessage);
+ const prev=db;db=next;if(!save()){db=prev;return}importRows=[];importBook=null;importMessage='تمت إضافة '+teachers.length+' تدريسي بنجاح';render();toast(importMessage);
  };
 }
 function selectExcelSheet(){
@@ -407,7 +440,7 @@ function validateWorkload(w){
  return '';
 }
 function workloadTitle(meta=db.workloadMeta){return 'العبء التدريسي لاساتذة قسم '+meta.department+' للعام الدراسي '+meta.year+' ('+meta.term+' - '+meta.study+')'}
-function saveWorkloadState(next){try{localStorage.setItem(key,JSON.stringify(next));db=next;return true}catch{toast('تعذر حفظ البيانات؛ صدّر نسخة احتياطية');return false}}
+function saveWorkloadState(next){const prev=db;db=next;if(save())return true;db=prev;return false}
 function workloadView(){
 const current=db.workloads.find(w=>w.id===workloadEdit);
 return section('نموذج الجامعة المعتمد','<p>إدخال ومراجعة العبء التدريسي باستخدام حقول ومعادلات النموذج المرفق. ترتبط السجلات باسم التدريسي والفترة المحددة أدناه.</p><div class="tools"><button data-wl="original">تنزيل النموذج الأصلي</button><button data-wl="export">تصدير الفترة إلى نموذج الجامعة</button></div><p class="muted">النموذج الأصلي يحمل العام 2025-2026. حدّد الفترة الصحيحة قبل إضافة السجلات أو الاستيراد. التصدير يحافظ على التنسيق والمعادلات والقوائم الأصلية. الساعات الفارغة غير مدخلة وتُعامل كصفر في الجمع وفق النموذج.</p>'+form('workloadMeta',field('department','القسم')+field('year','العام الدراسي')+'<label>الفصل<select name="term"><option>الكورس الاول</option><option>الكورس الثاني</option></select></label><label>الدراسة<select name="study"><option>الدراسة الصباحية</option><option>الدراسة المسائية</option></select></label>','اعتماد الفترة'))+
@@ -517,12 +550,176 @@ async function exportWorkload(){
  toast('تم تصدير النموذج؛ افتحه في Excel للمراجعة والطباعة');
 }
 
+// ===== المزامنة عبر Firebase =====
+// الذاكرة المحلية db تبقى مصدر العرض. كل save() يقارن db بآخر نسخة من الخادم (shadow) ويكتب الفروقات فقط.
+// تأكيدات القراءة والإجابات تُخزّن في مجموعتين مستقلتين (reads, answers) ليكتب كل تدريسي سجله فقط.
+const stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}':JSON.stringify(v??null);
+function strip(col,r){if(col==='announcements'){const {read,...x}=r;return x}if(col==='polls'){const {answers,...x}=r;return x}return r}
+function cloudView(){
+ const m={};
+ for(const c of CORE)m[c]=new Map(db[c].map(r=>[r.id,strip(c,r)]));
+ if(cloud.admin)m.workloads=new Map((db.workloads||[]).map(r=>[r.id,r]));
+ m.reads=new Map(db.announcements.flatMap(a=>(a.read||[]).map(t=>[a.id+'_'+t,{id:a.id+'_'+t,ann:a.id,teacher:t}])));
+ m.answers=new Map(db.polls.flatMap(p=>(p.answers||[]).map(x=>[p.id+'_'+x.teacher,{id:p.id+'_'+x.teacher,poll:p.id,teacher:x.teacher,answer:x.answer}])));
+ m.meta=new Map([['state',{id:'state',schedule:db.schedule,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
+ return m;
+}
+let pushQueued=false;
+function queuePush(){if(pushQueued)return;pushQueued=true;queueMicrotask(pushNow)}
+async function pushNow(){
+ pushQueued=false;
+ const {doc,writeBatch}=cloud.sdk,view=cloudView(),ops=[];
+ for(const c of cloud.admin?Object.keys(view):['reads','answers']){
+  const sh=cloud.shadow[c]||new Map();
+  for(const [id,data] of view[c]){const s=stable(data);if(sh.get(id)!==s&&(cloud.admin||data.teacher===cloud.teacherId))ops.push(['set',c,id,s])}
+  if(cloud.admin)for(const id of sh.keys())if(!view[c].has(id))ops.push(['del',c,id]);
+ }
+ if(!ops.length)return;
+ for(const [t,c,id,s] of ops){cloud.shadow[c]??=new Map();t==='set'?cloud.shadow[c].set(id,s):cloud.shadow[c].delete(id)}
+ setSync(navigator.onLine?'saving':'offline');
+ try{
+  for(let i=0;i<ops.length;i+=450){const b=writeBatch(cloud.fs);for(const [t,c,id,s] of ops.slice(i,i+450)){const r=doc(cloud.fs,c,id);t==='set'?b.set(r,JSON.parse(s)):b.delete(r)}await b.commit()}
+  setSync('ok');
+ }catch(e){
+  setSync('error');toast('تعذر الحفظ في السحابة: '+(e.code==='permission-denied'?'لا تملك صلاحية هذا التعديل':e.message));
+  applyRemote(true);
+ }
+}
+function applyRemote(force){
+ const g=c=>[...(cloud.raw[c]?.values()||[])].sort((a,b)=>(a.createdAt??0)-(b.createdAt??0));
+ const reads=g('reads'),answers=g('answers'),meta=cloud.raw.meta?.get('state')||{},next=structuredClone(initial);
+ for(const c of CORE)next[c]=g(c).map(r=>({...r}));
+ next.announcements.forEach(a=>a.read=reads.filter(r=>r.ann===a.id).map(r=>r.teacher));
+ next.polls.forEach(p=>p.answers=answers.filter(r=>r.poll===p.id).map(r=>({teacher:r.teacher,answer:r.answer})));
+ next.schedule=meta.schedule||[];next.scheduleStale=!!meta.scheduleStale;
+ next.workloadMeta=meta.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};
+ next.workloads=g('workloads');
+ db=next;updateIdentity();
+ if(!cloud.ready)return;
+ if(cloud.dirty&&!force){$('#syncBar').style.display='flex';return}
+ render();
+}
+function updateIdentity(){
+ const email=(cloud.user?.email||'').toLowerCase();
+ cloud.admin=!!cloud.admins?.includes(email);
+ cloud.teacherId=db.teachers.find(t=>(t.email||'').trim().toLowerCase()===email)?.id||'';
+ role=cloud.admin?'admin':'teacher';person=cloud.teacherId;
+ if(cloud.admin&&!cloud.wlUnsub)cloud.wlUnsub=listen('workloads');
+ if(!cloud.admin&&cloud.wlUnsub){cloud.wlUnsub();cloud.wlUnsub=null;delete cloud.raw.workloads;delete cloud.shadow.workloads}
+}
+function listen(c){
+ const {collection,onSnapshot}=cloud.sdk;
+ return onSnapshot(collection(cloud.fs,c),s=>{cloud.raw[c]=new Map(s.docs.map(d=>[d.id,d.data()]));cloud.shadow[c]=new Map(s.docs.map(d=>[d.id,stable(d.data())]));loaded(c)},listenError);
+}
+function listenError(e){
+ if(e.code==='permission-denied')gate('denied');
+ else{setSync('error');toast('انقطع الاتصال بقاعدة البيانات: '+e.message)}
+}
+function subscribe(){
+ const {doc,onSnapshot}=cloud.sdk;
+ cloud.expect=CORE.length+4;
+ for(const c of [...CORE,'reads','answers'])cloud.unsubs.push(listen(c));
+ cloud.unsubs.push(onSnapshot(doc(cloud.fs,'meta','state'),s=>{const d=s.exists()?s.data():null;cloud.raw.meta=new Map(d?[['state',d]]:[]);cloud.shadow.meta=new Map(d?[['state',stable(d)]]:[]);loaded('meta')},listenError));
+ cloud.unsubs.push(onSnapshot(doc(cloud.fs,'config','admins'),s=>{cloud.admins=s.exists()?(s.data().emails||[]).map(e=>String(e).toLowerCase()):null;loaded('admins')},listenError));
+}
+function loaded(c){
+ cloud.loaded.add(c);
+ if(!cloud.ready&&cloud.loaded.size>=cloud.expect){
+  applyRemote();
+  if(!cloud.admins)return gate('bootstrap');
+  cloud.ready=true;showApp();setSync(navigator.onLine?'ok':'offline');
+ }
+ if(cloud.ready)applyRemote();
+}
+function resetCloud(){
+ cloud.unsubs.forEach(u=>u());if(cloud.wlUnsub)cloud.wlUnsub();
+ Object.assign(cloud,{unsubs:[],wlUnsub:null,raw:{},shadow:{},loaded:new Set(),ready:false,dirty:false,admins:null,admin:false,teacherId:''});
+ $('#syncBar').style.display='none';
+ db=structuredClone(initial);
+}
+function setSync(s){
+ const b=$('#modeBadge'),t={local:['نسخة تجريبية · حفظ محلي',''],ok:['متزامن','ok'],saving:['جارٍ الحفظ…','warn'],offline:['غير متصل · سيُحفظ لاحقاً','warn'],error:['خطأ في المزامنة','danger']}[s];
+ b.textContent=t[0];b.className='badge '+t[1];
+}
+function gate(state,msg=''){
+ const g=$('#gate'),email=esc(cloud.user?.email||'');
+ const out='<button class="secondary" data-gate="signout">تسجيل الخروج</button>';
+ const html={
+  loading:'<h2>جارٍ التحميل…</h2><p class="muted">الاتصال بقاعدة بيانات القسم.</p>',
+  signin:'<h2>رئاسة القسم الذكية</h2><p>سجّل الدخول بحساب الجامعة <b dir="ltr">@'+esc(DOMAIN)+'</b> للوصول إلى بيانات القسم.</p><button class="google" data-gate="signin"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>الدخول بحساب Google الجامعي</button>',
+  domain:'<h2>هذا الحساب غير مسموح</h2><p>سجّلت الدخول بـ <b dir="ltr">'+email+'</b>. يُسمح فقط بحسابات <b dir="ltr">@'+esc(DOMAIN)+'</b>.</p>'+out,
+  bootstrap:'<h2>إعداد أول مرة</h2><p>لا يوجد رئيس قسم معتمد في قاعدة البيانات بعد.</p><p>اعتماد الحساب <b dir="ltr">'+email+'</b> رئيساً للقسم يمنحه صلاحية الإضافة والتعديل، ويمكنه لاحقاً إضافة مشرفين آخرين.</p><div class="tools" style="justify-content:center"><button data-gate="claim">اعتماد حسابي رئيساً للقسم</button>'+out+'</div>',
+  denied:'<h2>تعذر الوصول إلى البيانات</h2><p>رفضت قاعدة البيانات الطلب للحساب <b dir="ltr">'+email+'</b>. تأكد من نشر قواعد الحماية (firestore.rules) ومن أن الحساب جامعي موثّق.</p>'+out,
+  error:'<h2>تعذر الاتصال</h2><p>'+esc(msg)+'</p><button data-gate="reload">إعادة المحاولة</button>'
+ }[state];
+ if(msg&&state!=='error')toast(msg);
+ g.innerHTML=html;g.hidden=false;$('#view').hidden=true;$('#notice').hidden=true;$('#nav').innerHTML='';$('#title').textContent=state==='loading'?'':'تسجيل الدخول';
+ updateWho();
+ g.querySelectorAll('[data-gate]').forEach(b=>b.onclick=()=>gateAction(b.dataset.gate,b));
+}
+async function gateAction(a,b){
+ const S=cloud.sdk;
+ if(a==='reload')return location.reload();
+ if(a==='signout')return S.signOut(cloud.auth);
+ if(a==='signin'){
+  const p=new S.GoogleAuthProvider();p.setCustomParameters({hd:DOMAIN,prompt:'select_account'});
+  try{await S.signInWithPopup(cloud.auth,p)}
+  catch(e){if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/cancelled-popup-request'].includes(e.code))return S.signInWithRedirect(cloud.auth,p);
+   if(e.code!=='auth/popup-closed-by-user')toast(e.code==='auth/unauthorized-domain'?'هذا الموقع غير مضاف إلى النطاقات المسموحة في Firebase Authentication':'تعذر تسجيل الدخول: '+e.message)}
+ }
+ if(a==='claim'){b.disabled=true;try{await S.setDoc(S.doc(cloud.fs,'config','admins'),{emails:[cloud.user.email.toLowerCase()]})}catch(e){b.disabled=false;toast('تعذر الاعتماد: '+(e.code==='permission-denied'?'يوجد رئيس قسم معتمد مسبقاً':e.message))}}
+}
+function showApp(){
+ $('#gate').hidden=true;$('#view').hidden=false;$('#notice').hidden=false;
+ $('#noticeSummary').textContent='البيانات مشتركة ومتزامنة بين أجهزة القسم';
+ $('#noticeText').textContent='يُحفظ كل تعديل فوراً ويظهر لبقية المستخدمين. الملفات المرفقة تُسجّل أسماؤها فقط. يعمل التطبيق دون إنترنت مؤقتاً ويرسل التعديلات عند عودة الاتصال. صدّر نسخة احتياطية دورياً من صفحة النسخ الاحتياطي.';
+ render();
+}
+function updateWho(){
+ const w=$('#who');
+ if(!cloud.on||!cloud.user){w.innerHTML='';return}
+ w.innerHTML='<span>'+esc(cloud.user.email)+(cloud.ready?' · '+(cloud.admin?'رئيس القسم':'تدريسي'):'')+'</span><button class="btn-sm secondary" id="signout">خروج</button>';
+ $('#signout').onclick=()=>cloud.sdk.signOut(cloud.auth);
+}
+function onUser(user){
+ resetCloud();cloud.user=user;
+ if(!user)return gate('signin');
+ const email=(user.email||'').toLowerCase();
+ if(!user.emailVerified||!email.endsWith('@'+DOMAIN))return gate('domain');
+ gate('loading');subscribe();
+}
+async function initCloud(){
+ gate('loading');setSync('ok');
+ try{
+  const base='https://www.gstatic.com/firebasejs/10.12.2/';
+  const [app,auth,fs]=await Promise.all(['firebase-app','firebase-auth','firebase-firestore'].map(m=>import(base+m+'.js')));
+  cloud.sdk={...app,...auth,...fs};
+  const a=app.initializeApp(window.FIREBASE_CONFIG);
+  cloud.auth=auth.getAuth(a);
+  try{cloud.fs=fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})})}catch{cloud.fs=fs.getFirestore(a)}
+  auth.onAuthStateChanged(cloud.auth,onUser);
+ }catch(e){gate('error','تعذر تحميل خدمة Firebase. تحقق من الاتصال بالإنترنت ومن إعدادات firebase-config.js.')}
+}
+function adminsSection(){
+ if(!cloud.on||!cloud.admin)return '';
+ return section('المشرفون','<p class="muted">الحسابات التي تملك صلاحية الإضافة والتعديل والحذف. بقية الحسابات الجامعية ترى البيانات وتؤكد القراءة وتجيب عن الأسئلة فقط.</p>'
+  +table(['البريد',''],cloud.admins.map(e=>['<span dir="ltr">'+esc(e)+'</span>',cloud.admins.length>1?'<button class="btn-sm ghost-danger" data-admin-del="'+esc(e)+'">إزالة</button>':'']))
+  +form('adminForm',field('email','إضافة مشرف (بريد جامعي)','email'),'إضافة مشرف'));
+}
+async function setAdmins(emails){
+ try{await cloud.sdk.setDoc(cloud.sdk.doc(cloud.fs,'config','admins'),{emails});toast('تم تحديث المشرفين')}catch(e){toast('تعذر التحديث: '+e.message)}
+}
+
 function applyTheme(t){if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme}
 try{applyTheme(localStorage.getItem('smart-department-theme')||'')}catch{}
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme,dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches,t=dark?'light':'dark';applyTheme(t);try{localStorage.setItem('smart-department-theme',t)}catch{}};
 $('#menu').onclick=()=>document.body.classList.toggle('nav-open');
 $('#overlay').onclick=()=>document.body.classList.remove('nav-open');
-$('#date').textContent=new Date().toLocaleDateString('ar-IQ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});render();
+$('#date').textContent=new Date().toLocaleDateString('ar-IQ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+$('#syncApply').onclick=()=>render();
+document.addEventListener('input',e=>{if(e.target.closest('#view form'))cloud.dirty=true});
+addEventListener('online',()=>cloud.on&&setSync('ok'));addEventListener('offline',()=>cloud.on&&setSync('offline'));
+if(cloud.on)initCloud();else{setSync('local');render()}
 </script>
 </body>
 </html>

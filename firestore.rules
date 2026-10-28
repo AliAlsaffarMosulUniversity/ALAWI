@@ -1,0 +1,62 @@
+rules_version = '2';
+
+// قواعد حماية قاعدة بيانات رئاسة القسم الذكية.
+// القراءة لأي حساب جامعي موثّق (@uomosul.edu.iq)، والكتابة لرئيس القسم والمشرفين المسجلين في config/admins.
+// التدريسي يكتب فقط تأكيد قراءته للتبليغات وإجابته على الأسئلة، ولسجله هو فقط.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('.*@uomosul[.]edu[.]iq$');
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function adminsPath() { return /databases/$(database)/documents/config/admins; }
+    function isAdmin() {
+      return signedIn() && exists(adminsPath()) && myEmail() in get(adminsPath()).data.emails;
+    }
+    function ownsTeacher(tid) {
+      let path = /databases/$(database)/documents/teachers/$(tid);
+      return signedIn() && exists(path) && get(path).data.get('email', '').lower() == myEmail();
+    }
+
+    // قائمة المشرفين. أول مستخدم جامعي يمكنه إنشاؤها بحسابه فقط، ثم يديرها المشرفون.
+    match /config/admins {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.emails == [myEmail()];
+      allow update: if isAdmin() && request.resource.data.emails.size() > 0;
+    }
+
+    // بيانات القسم المشتركة
+    match /{col}/{id} {
+      allow read: if signedIn()
+        && col in ['teachers', 'announcements', 'courses', 'invigilation', 'tasks', 'committees', 'polls', 'meta'];
+      allow write: if isAdmin()
+        && col in ['teachers', 'announcements', 'courses', 'invigilation', 'tasks', 'committees', 'polls', 'meta'];
+    }
+
+    // العبء التدريسي: لرئيس القسم والمشرفين فقط
+    match /workloads/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // تأكيد قراءة التبليغات: المعرّف = رقم التبليغ_رقم التدريسي
+    match /reads/{id} {
+      allow read: if signedIn();
+      allow create: if isAdmin()
+        || (ownsTeacher(request.resource.data.teacher)
+            && id == request.resource.data.ann + '_' + request.resource.data.teacher);
+      allow update, delete: if isAdmin();
+    }
+
+    // إجابات الأسئلة: المعرّف = رقم السؤال_رقم التدريسي
+    match /answers/{id} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        || (ownsTeacher(request.resource.data.teacher)
+            && id == request.resource.data.poll + '_' + request.resource.data.teacher);
+      allow delete: if isAdmin();
+    }
+  }
+}
