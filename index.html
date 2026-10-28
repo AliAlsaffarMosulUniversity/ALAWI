@@ -128,6 +128,48 @@ footer{font-size:12px;color:var(--muted);margin:28px 0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .avatar{color:hsl(var(--h) 60% 85%);background:hsl(var(--h) 35% 26%)}}
 .com-mission summary{cursor:pointer;color:var(--primary);font-size:14px}
 .com-mission p{margin:6px 0 0;color:var(--muted)}
+.tt-stats{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:10px;color:var(--muted);font-size:14px}
+.tt-stats b{color:var(--text)}
+.tt-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tt-legend span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:30px;font-size:13px;background:hsl(var(--h) 70% 94%);color:hsl(var(--h) 55% 28%)}
+.tt-legend i{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,hsl(var(--h) 75% 55%),hsl(calc(var(--h) + 35) 75% 45%))}
+.tt{display:grid;gap:6px}
+.tt-row{display:grid;grid-template-columns:96px repeat(4,minmax(0,1fr));gap:6px;align-items:stretch;border-radius:14px;padding:4px}
+.tt-head>div{font-size:12px;color:var(--muted);text-align:center;padding:2px 0}
+.tt-row.today{background:linear-gradient(90deg,var(--primary-soft),transparent);box-shadow:inset 0 0 0 2px var(--primary-soft)}
+.tt-day{display:grid;align-content:center;font-weight:600;padding:0 8px}
+.tt-day small{justify-self:start;margin-top:2px;background:var(--primary);color:var(--primary-ink);font-size:11px;padding:1px 8px;border-radius:20px;font-weight:500}
+.tt-row.off .tt-day{color:var(--muted);font-weight:500}
+.tt-cell{min-height:74px;border-radius:12px;display:grid;gap:4px}
+.tt-cell.empty{border:1.5px dashed var(--line);background:repeating-linear-gradient(135deg,transparent 0 8px,color-mix(in srgb,var(--line) 35%,transparent) 8px 9px)}
+.tt-lesson{position:relative;border-radius:12px;padding:9px 11px;color:#fff;background:linear-gradient(135deg,hsl(var(--h) 72% 50%),hsl(calc(var(--h) + 35) 70% 40%));box-shadow:0 6px 16px hsl(var(--h) 60% 40% / .28);display:grid;align-content:start;gap:1px;overflow:hidden;transition:transform .15s;animation:t-up .4s ease both}
+.tt-lesson::after{content:'';position:absolute;inset:auto -20px -30px auto;width:80px;height:80px;border-radius:50%;background:#ffffff1f}
+.tt-lesson:hover{transform:translateY(-2px) scale(1.02)}
+.tt-lesson b{font-size:14px;line-height:1.4}
+.tt-lesson small{opacity:.9;font-size:12px;display:flex;flex-wrap:wrap;gap:2px 8px}
+.tt-time{display:none}
+.tt-ic{font-size:16px}
+.tt-lesson em{position:absolute;top:7px;left:8px;font-style:normal;font-size:11px;font-weight:600;background:#fff;color:hsl(var(--h) 60% 32%);padding:1px 8px;border-radius:20px}
+.tt-lesson.now{outline:3px solid #f2c862;outline-offset:2px;animation:tt-pulse 1.8s ease-in-out infinite}
+.tt-lesson.next{outline:2px dashed #ffffffb0;outline-offset:-5px}
+@keyframes tt-pulse{50%{box-shadow:0 0 0 7px #f2c86255,0 6px 16px hsl(var(--h) 60% 40% / .28)}}
+.tt-empty{display:grid;justify-items:center;text-align:center;gap:4px;padding:24px}
+.tt-empty span{font-size:38px}
+.tt-empty small{color:var(--muted)}
+.slot-item.mine{color:#fff;background:linear-gradient(135deg,hsl(var(--h) 72% 50%),hsl(calc(var(--h) + 35) 70% 40%));box-shadow:0 4px 12px hsl(var(--h) 60% 40% / .3)}
+.week:has(.slot-item.mine) .slot-item:not(.mine){opacity:.55}
+@media(max-width:700px){
+ .who .view-as span{display:none}.who .view-as select{max-width:118px;padding:6px}
+ .tt-head{display:none}
+ .tt-row{grid-template-columns:1fr;padding:8px;border:1px solid var(--line)}
+ .tt-row.off{display:none}
+ .tt-day{display:flex;gap:8px;align-items:center;padding:0 2px 2px}
+ .tt-cell.empty{display:none}
+ .tt-cell{min-height:0}
+ .tt-time{display:inline}
+}
+@media (prefers-reduced-motion:reduce){.tt-lesson{animation:none!important;transition:none}}
+@media print{.tt-lesson{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -376,7 +418,7 @@ function teacherDashboard(){
  const dayBox=section('📅 يومك',(todayLessons.length?'<ol class="t-timeline">'+todayLessons.map(s=>'<li><span dir="ltr">'+esc(s.slot)+'</span><b>'+esc(s.course)+'</b><small>'+esc(s.room||'')+'</small></li>').join('')+'</ol>':'<p class="t-quiet">'+(todayName?'لا محاضرات لديك اليوم. وقت مناسب للبحث والقراءة 📖':'عطلة نهاية الأسبوع، استمتع بوقتك 🌿')+'</p>')
   +(inv[0]?'<div class="t-next"><span class="t-count">'+daysUntil(inv[0].date)+'</span><div><b>'+esc(inv[0].exam||'مراقبة امتحانية')+'</b><small>'+[esc(inv[0].date),inv[0].start?'<span dir="ltr">'+esc(inv[0].start)+(inv[0].end?' – '+esc(inv[0].end):'')+'</span>':'',esc(inv[0].room)].filter(Boolean).join(' · ')+'</small></div></div>'+(inv.length>1?'<p class="muted">و'+(inv.length-1)+' مراقبة أخرى في <button class="link" data-page="4">جدول المراقبات</button></p>':''):''));
  const workBox=section('🎯 مهامي ولجاني',(mine.map(t=>'<div class="t-row"><span>'+esc(t.title)+'</span>'+(overdue(t)?pill('danger','متأخرة'):t.due?pill('info',daysUntil(t.due)):'')+'</div>').join('')+(com.length?'<div class="chips t-coms">'+com.map(c=>'<span class="chip">'+(c.chair===person?'⭐ ':'')+esc(c.title)+'</span>').join('')+'</div>':''))||'<p class="t-quiet">لا مهام مفتوحة. عمل رائع! 🌟</p>');
- return '<div class="t-home">'+hero+tcards+'<div class="grid">'+annBox+'<div>'+dayBox+workBox+'</div></div></div>';
+ return '<div class="t-home">'+hero+tcards+section('🗓️ جدولي الأسبوعي',myWeek(person))+'<div class="grid">'+annBox+'<div>'+dayBox+workBox+'</div></div></div>';
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
@@ -403,10 +445,33 @@ function keptAttachments(){
  const a=db.announcements.find(a=>a.id===editId('announcement')),list=a?attachList(a):[];
  return list.length?'<fieldset class="full"><legend>المرفقات الحالية (علّم ما تريد حذفه)</legend><div class="chips">'+list.map((x,i)=>'<label class="chip"><input type="checkbox" name="drop" value="'+i+'">'+esc(x.name)+'</label>').join('')+'</div></fieldset>':'';
 }
+// الجدول الأسبوعي الشخصي: لون وأيقونة ثابتان لكل مادة، وتمييز اليوم والحصة الجارية والتالية
+const COURSE_ICONS=['📘','📗','📙','📕','💼','📊','📈','🧭','🏛️','💡','🧮','🤝'];
+// FNV-1a لتوزيع الألوان؛ والمواد تأخذ ألواناً متباعدة بالزاوية الذهبية حسب ترتيبها
+const hueOf=v=>{let h=2166136261;for(const ch of String(v)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0)%360};
+const courseKey=x=>x.cid||x.course;
+const courseHue=k=>{const i=db.courses.findIndex(c=>c.id===k);return i<0?hueOf(k):Math.round((i*137.508+200)%360)};
+function slotState(day,slot){
+ const now=new Date(),hm=now.toTimeString().slice(0,5),[a,b]=slot.split('–').map(t=>t.trim().padStart(5,'0'));
+ if(DAYS[now.getDay()]!==day)return '';
+ return hm>=a&&hm<b?'now':hm<a?'later':'';
+}
+function myWeek(id){
+ const items=db.schedule.filter(s=>s.teacher===id);
+ if(!items.length)return '<div class="tt-empty"><span>🗓️</span><b>'+(db.schedule.length?'لا حصص لك في الجدول الحالي':'لم يُنشر الجدول الأسبوعي بعد')+'</b><small>سيظهر جدولك هنا ملوّناً فور توليده من رئاسة القسم.</small></div>';
+ const courses=[...new Map(items.map(x=>[courseKey(x),x])).values()],perDay=DAYS.map(d=>items.filter(x=>x.day===d).length),busiest=DAYS[perDay.indexOf(Math.max(...perDay))];
+ const todayName=DAYS[new Date().getDay()],next=todayName?SLOTS.find(sl=>slotState(todayName,sl)==='later'&&items.some(x=>x.day===todayName&&x.slot===sl)):null;
+ const tile=x=>{const k=courseKey(x),h=courseHue(k),st=slotState(x.day,x.slot);return '<div class="tt-lesson'+(st==='now'?' now':'')+(x.day===todayName&&x.slot===next?' next':'')+'" style="--h:'+h+'"><span class="tt-ic">'+COURSE_ICONS[h%COURSE_ICONS.length]+'</span><b>'+esc(x.course)+'</b><small><span class="tt-time" dir="ltr">'+esc(x.slot)+'</span>'+(x.room?'📍 '+esc(x.room):'')+'</small>'+(st==='now'?'<em>الآن</em>':x.day===todayName&&x.slot===next?'<em>التالية</em>':'')+'</div>'};
+ return '<div class="tt-stats"><span>📚 <b>'+items.length+'</b> حصة أسبوعياً</span><span>🎓 <b>'+courses.length+'</b> '+(courses.length===1?'مادة':'مواد')+'</span><span>🔥 أكثر أيامك ازدحاماً: <b>'+busiest+'</b></span></div>'
+  +'<div class="tt-legend">'+courses.map(x=>{const h=courseHue(courseKey(x));return '<span style="--h:'+h+'"><i></i>'+esc(x.course)+' <small>×'+items.filter(y=>courseKey(y)===courseKey(x)).length+'</small></span>'}).join('')+'</div>'
+  +'<div class="tt"><div class="tt-row tt-head"><div></div>'+SLOTS.map(sl=>'<div dir="ltr">'+sl+'</div>').join('')+'</div>'
+  +DAYS.map(d=>'<div class="tt-row'+(d===todayName?' today':'')+(items.some(x=>x.day===d)?'':' off')+'"><div class="tt-day">'+d+(d===todayName?'<small>اليوم</small>':'')+'</div>'+SLOTS.map(sl=>{const here=items.filter(x=>x.day===d&&x.slot===sl);return '<div class="tt-cell'+(here.length?'':' empty')+'">'+here.map(tile).join('')+'</div>'}).join('')+'</div>').join('')+'</div>';
+}
 function weekGrid(items){
- return '<div class="scroll"><table class="week"><thead><tr><th>اليوم</th>'+SLOTS.map(s=>'<th dir="ltr" style="text-align:right">'+s+'</th>').join('')+'</tr></thead><tbody>'+DAYS.map(day=>'<tr><td>'+day+'</td>'+SLOTS.map(slot=>'<td>'+(items.filter(x=>x.day===day&&x.slot===slot).map(x=>'<div class="slot-item"><b>'+esc(x.course)+'</b><small>'+esc(name(x.teacher))+' · '+esc(x.room)+'</small></div>').join('')||'<span class="free">—</span>')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+ return '<div class="scroll"><table class="week"><thead><tr><th>اليوم</th>'+SLOTS.map(s=>'<th dir="ltr" style="text-align:right">'+s+'</th>').join('')+'</tr></thead><tbody>'+DAYS.map(day=>'<tr><td>'+day+'</td>'+SLOTS.map(slot=>'<td>'+(items.filter(x=>x.day===day&&x.slot===slot).map(x=>{const mine=!isAdmin()&&x.teacher===person;return '<div class="slot-item'+(mine?' mine':'')+'"'+(mine?' style="--h:'+courseHue(courseKey(x))+'"':'')+'><b>'+(mine?COURSE_ICONS[courseHue(courseKey(x))%COURSE_ICONS.length]+' ':'')+esc(x.course)+'</b><small>'+esc(name(x.teacher))+(x.room?' · '+esc(x.room):'')+'</small></div>'}).join('')||'<span class="free">—</span>')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
 }
 function coursesView(){
+ if(!isAdmin()&&person&&scheduleFilter==='t:'+person)return section('🗓️ جدولي الأسبوعي',myWeek(person))+section('جدول القسم','<div class="tools"><label>عرض<select id="scheduleFilter"><option value="t:'+esc(person)+'">جدولي فقط</option><option value="">كل جدول القسم</option></select></label><button class="secondary" data-action="print">طباعة / PDF</button></div><p class="muted">اختر «كل جدول القسم» لرؤية حصص الزملاء، وتبقى حصصك ملوّنة.</p>');
  const rooms=[...new Map(db.schedule.map(s=>[roomKey(s.room),s.room])).entries()],tids=[...new Set(db.schedule.map(s=>s.teacher))];
  const shown=db.schedule.filter(s=>!scheduleFilter||(scheduleFilter.startsWith('t:')?s.teacher===scheduleFilter.slice(2):roomKey(s.room)===scheduleFilter.slice(2)));
  return section(formTitle('course','المواد الدراسية','تعديل مادة'),(isAdmin()?form('course',field('title','اسم المادة')+teacherField('teacher','التدريسي',false)+field('sessions','عدد الحصص الأسبوعية (1 إن تُرك فارغاً)','number',false)+field('room','القاعة','text',false),'إضافة المادة'):'')
@@ -431,7 +496,7 @@ function committeesView(){
 }
 // أول حرفين من الاسم دون الألقاب، ولون ثابت لكل تدريسي
 function initials(n){const w=String(n||'').replace(/^(د|أ|ا|م|م\.م|أ\.د|أ\.م\.د)\.\s*/,'').split(/\s+/).filter(Boolean);return w.length>1?w[0][0]+' '+w.at(-1).replace(/^ال(?=..)/,'')[0]:w[0]?.[0]||'؟'}
-function avatar(id,cls=''){let h=0;for(const ch of String(id))h=(h*31+ch.charCodeAt(0))%360;return '<span class="avatar '+cls+'" style="--h:'+h+'" aria-hidden="true">'+esc(initials(name(id)))+'</span>'}
+function avatar(id,cls=''){const h=hueOf(id);return '<span class="avatar '+cls+'" style="--h:'+h+'" aria-hidden="true">'+esc(initials(name(id)))+'</span>'}
 function committeeCard(c){
  const members=c.members.filter(m=>m!==c.chair),mine=person&&(c.chair===person||c.members.includes(person)),count=members.length+(c.chair?1:0);
  return '<article class="com-card'+(mine?' mine':'')+'"><header><span class="com-ic">👥</span><div><h3>'+esc(c.title)+'</h3><small>'+(count===1?'عضو واحد':count===2?'عضوان':count+' '+(count<11?'أعضاء':'عضواً'))+(mine?' · '+pill('ok',c.chair===person?'أنت رئيسها':'أنت عضو'):'')+'</small></div>'+actions('committee',c.id)+'</header>'
