@@ -185,7 +185,7 @@ function remove(f,id){
  if(col==='courses'||col==='teachers')db.scheduleStale=true;
  commit('تم الحذف');
 }
-function csv(kind){const rows=kind==='schedule'?[['اليوم','الفترة','المادة','التدريسي','القاعة'],...db.schedule.map(x=>[x.day,x.slot,x.course,name(x.teacher),x.room])]:[['الاسم','النوع','الجهة','اللقب العلمي','التخصص','أيام التواجد','البريد الإلكتروني','الهاتف'],...db.teachers.map(x=>[x.name,isExternal(x)?'خارجي':'ملاك القسم',x.affiliation,x.rank,x.specialty,x.days,x.email,x.phone])];download(kind+'.csv','﻿'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+function csv(kind){const rows=kind==='schedule'?[['اليوم','الفترة','المادة','التدريسي','القاعة'],...db.schedule.map(x=>[x.day,x.slot,x.course,name(x.teacher),x.room])]:[[...TEMPLATE.map(f=>f[1]),'النوع','أيام التواجد','التخصص'],...db.teachers.map(x=>[...TEMPLATE.map(f=>x[f[0]]),isExternal(x)?'خارجي':'ملاك القسم',x.days,x.specialty])];download(kind+'.csv','﻿'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')}
 function download(file,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=file;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function bind(id,fn){const f=document.getElementById(id);if(f)f.onsubmit=e=>{e.preventDefault();fn(Object.fromEntries(new FormData(f)),f)}}
 
@@ -216,12 +216,13 @@ function teacherDashboard(){
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
- return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('affiliation','الجهة (للخارجي)','text',false)+'<label>اللقب العلمي<select name="rank"><option value="">غير محدد</option>'+RANKS.map(r=>'<option>'+r+'</option>').join('')+'</select></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (اختيارية للخارجي)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
+ return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (اختيارية للخارجي)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
  +section('دليل التدريسيين','<div class="tools"><button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
  +section('التدريسيون الخارجيون','<p class="muted">يظهرون في قوائم الاختيار تحت «تدريسيون خارجيون»، فيمكن تكليفهم بالمراقبات والمواد واللجان عند الحاجة.</p>'+teacherTable(db.teachers.filter(isExternal),true));
 }
+const teacherOrg=t=>[t.department,t.college].filter(Boolean).join(' – ')||t.affiliation||'';
 function teacherTable(list,ext){
- return table(['الاسم',ext?'الجهة':'اللقب','التخصص','أيام التواجد','التواصل',''],list.map(t=>[esc(t.name)+(ext&&t.rank?'<br><small class="muted">'+esc(t.rank)+'</small>':''),esc((ext?t.affiliation:t.rank)||'—'),esc(t.specialty||'—'),teacherDays(t).length?esc(teacherDays(t).join('، ')):ext?'—':pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',actions('teacher',t.id)]));
+ return table(['الاسم','اللقب العلمي','الشهادة',ext?'الجهة':'أيام التواجد','التواصل',''],list.map(t=>[esc(t.name),esc(t.rank||'—'),esc(t.degree||'—'),ext?esc(teacherOrg(t)||'—'):teacherDays(t).length?esc(teacherDays(t).join('، ')):pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',actions('teacher',t.id)]));
 }
 function announcementsView(){
  const admin=role==='admin';
@@ -302,7 +303,7 @@ bind('teacher',(d,f)=>{
  if(!days.length&&d.type!=='external')return toast('اختر يوم تواجد واحداً على الأقل');
  if(db.teachers.some(t=>t.id!==id&&t.name.trim().replace(/\s+/g,' ')===nm))return toast('يوجد تدريسي بالاسم نفسه');
  if(id)(db.workloads||[]).forEach(w=>{if(w.teacher===id)w.name=nm});
- upsert('teacher',{name:nm,type:d.type==='external'?'external':'',affiliation:d.type==='external'?d.affiliation.trim():'',rank:d.rank,specialty:d.specialty.trim(),email:d.email.trim(),phone:d.phone.trim(),days:DAYS.filter(x=>days.includes(x)).join('، ')});
+ upsert('teacher',{name:nm,type:d.type==='external'?'external':'',college:d.college.trim(),department:d.department.trim(),degree:d.degree.trim(),rank:d.rank.trim(),specialty:d.specialty.trim(),email:d.email.trim(),phone:d.phone.trim(),days:DAYS.filter(x=>days.includes(x)).join('، ')});
  db.scheduleStale=true;commit(id?'تم حفظ التعديل':'تمت إضافة التدريسي');
 });
 bind('announcement',(d,f)=>{const file=f.elements.file.files[0]?.name,rec={title:d.title.trim(),body:d.body.trim()};if(file)rec.file=file;if(!editId('announcement'))Object.assign(rec,{date:new Date().toLocaleString('ar-IQ'),file:file||'',read:[]});const ed=editId('announcement');upsert('announcement',rec);commit(ed?'تم حفظ التعديل':'تم نشر التبليغ على هذا المتصفح')});
@@ -359,30 +360,47 @@ if(a==='migrate'&&confirm('رفع البيانات المحلية من هذا ا
 }
 
 let importRows=[],importBook=null,importMessage='';
-const teacherColumns=['الاسم','أيام التواجد','اللقب العلمي','التخصص','البريد الإلكتروني','الهاتف','النوع','الجهة'];
+// أعمدة نموذج Excel بالترتيب المعتمد، ثم أعمدة اختيارية تُقرأ إن وُجدت
+const TEMPLATE=[['email','Email Address'],['name','الاسم الرباعي واللقب'],['college','الكلية'],['department','القسم'],['degree','الشهادة'],['rank','العنوان الوظيفي او اللقب العلمي'],['phone','رقم الهاتف']];
+const IMPORT_FIELDS=[
+ ['email',['Email Address','Email','E-mail','البريد الإلكتروني','البريد الالكتروني','البريد']],
+ ['name',['الاسم الرباعي واللقب','الاسم الرباعي','الاسم','اسم التدريسي','الاسم الكامل']],
+ ['college',['الكلية']],['department',['القسم']],['degree',['الشهادة']],
+ ['rank',['العنوان الوظيفي او اللقب العلمي','العنوان الوظيفي','اللقب العلمي','اللقب']],
+ ['phone',['رقم الهاتف','الهاتف']],
+ ['days',['أيام التواجد','الأيام المتاحة']],['specialty',['التخصص']],['type',['النوع','نوع التدريسي']]];
+const PREVIEW=[['name','الاسم'],['email','البريد'],['college','الكلية'],['department','القسم'],['degree','الشهادة'],['rank','اللقب'],['phone','الهاتف'],['typeText','النوع']];
 let importType='';
 const typeLabel=t=>t==='external'?'خارجي':'ملاك القسم';
-function parseType(v){v=norm(v);if(!v)return importType;if(/خارج/.test(v))return 'external';if(/ملاك|القسم|داخل/.test(v))return '';return null}
 const norm=v=>String(v??'').trim().replace(/\s+/g,' ');
+const hk=v=>norm(v).toLowerCase().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+const isHomeDept=d=>hk(d).includes('اداره الاعمال');
+// النوع: من عمود النوع إن وُجد، وإلا من عمود القسم، وإلا من الاختيار في الصفحة
+function rowType(rawType,department){
+ const v=norm(rawType);
+ if(v)return /خارج/.test(v)?'external':/ملاك|القسم|داخل/.test(v)?'':null;
+ if(norm(department))return isHomeDept(department)?'':'external';
+ return importType;
+}
 const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 function validateTeacherRows(rows){
  if(!rows.length)throw Error('الورقة فارغة');
- const headers=rows[0].map(norm), aliases=[['الاسم','اسم التدريسي','الاسم الكامل'],['أيام التواجد','الأيام المتاحة','الايام المتاحة'],['اللقب العلمي'],['التخصص'],['البريد الإلكتروني','البريد الالكتروني'],['الهاتف','رقم الهاتف'],['النوع','نوع التدريسي'],['الجهة','جهة الانتساب']];
- const indexes=aliases.map(a=>headers.findIndex(h=>a.includes(h)));
- if(indexes[0]<0)throw Error('يجب أن يحتوي الصف الأول على عمود الاسم أو اسم التدريسي');
+ const headers=rows[0].map(hk);
+ const indexes=IMPORT_FIELDS.map(([,a])=>{const keys=a.map(hk);return headers.findIndex(h=>keys.includes(h))});
+ if(indexes[1]<0)throw Error('يجب أن يحتوي الصف الأول على عمود «الاسم الرباعي واللقب»');
  const seen=new Set(db.teachers.map(t=>norm(t.name)));
  return rows.slice(1).map((row,i)=>{
- const values=indexes.map(j=>j<0?'':norm(row[j]));
- if(!values.some(Boolean))return null;
- const [name,rawDays,rank,specialty,email,phone,rawType,affiliation]=values,type=parseType(rawType);
- const days=[...new Set(rawDays.split(/[,،;؛\n]/).map(norm).filter(Boolean))];
- let error=!name?'الاسم مطلوب':name.length>150?'الاسم طويل جداً':seen.has(name)?'اسم مكرر في الملف أو الدليل':days.some(d=>!dayNames.includes(d))?'أيام تواجد غير صحيحة':email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'بريد إلكتروني غير صحيح':type===null?'النوع يجب أن يكون «ملاك القسم» أو «خارجي»':'';
- if(!error)seen.add(name);
- return {row:i+2,name,days:days.join('، '),rank,specialty,email,phone,type:type||'',affiliation:type==='external'?affiliation:'',error};
+ const r={};IMPORT_FIELDS.forEach(([k],n)=>r[k]=indexes[n]<0?'':norm(row[indexes[n]]));
+ if(!Object.values(r).some(Boolean))return null;
+ if(/^7\d{9}$/.test(r.phone))r.phone='0'+r.phone; // Excel يحذف الصفر الأول من الأرقام العراقية
+ const days=[...new Set(r.days.split(/[,،;؛\n]/).map(norm).filter(Boolean))],type=rowType(r.type,r.department);
+ const error=!r.name?'الاسم مطلوب':r.name.length>150?'الاسم طويل جداً':seen.has(r.name)?'اسم مكرر في الملف أو الدليل':days.some(d=>!dayNames.includes(d))?'أيام تواجد غير صحيحة':r.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)?'بريد إلكتروني غير صحيح':type===null?'النوع يجب أن يكون «ملاك القسم» أو «خارجي»':'';
+ if(!error)seen.add(r.name);
+ return {...r,row:i+2,days:days.join('، '),type:type||'',typeText:type===null?'':typeLabel(type),error};
  }).filter(Boolean);
 }
 function adminView(){
-return section('الإدارة · استيراد بيانات التدريسيين','<p>اختر ملف Excel بصيغة .xlsx أو .xls، ثم راجع البيانات واعتمد الصفوف الصالحة. تُضاف السجلات الجديدة فقط دون تغيير السجلات الحالية.</p><p class="muted">العمود المطلوب: الاسم. اختياري: أيام التواجد، اللقب العلمي، التخصص، البريد الإلكتروني، الهاتف، النوع (ملاك القسم أو خارجي)، الجهة. افصل أيام التواجد بفاصلة؛ تركها فارغة يستلزم إضافتها قبل توليد الجدول.</p><label>الصفوف التي لا تحدد النوع تُستورد بوصفها<select id="importType"><option value="">تدريسيي ملاك القسم</option><option value="external"'+(importType==='external'?' selected':'')+'>تدريسيين خارجيين</option></select></label><div class="tools"><button id="excelTemplate">تنزيل نموذج Excel</button></div><label>ملف التدريسيين<input id="excelFile" type="file" accept=".xlsx,.xls"></label><p class="muted">الحد الأقصى 5 ميغابايت و2000 صف في الورقة. تتم قراءة الملف محلياً في المتصفح.</p><div id="excelStatus" role="status">'+esc(importMessage)+'</div>'+(importBook?'<label>ورقة العمل<select id="excelSheet">'+importBook.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select></label>':'')+'<div id="excelPreview"></div>')+section('دليل معلومات التدريسيين',table(teacherColumns,db.teachers.map(t=>[t.name,t.days,t.rank,t.specialty,t.email,t.phone,typeLabel(t.type),t.affiliation].map(esc))));
+return section('الإدارة · استيراد بيانات التدريسيين','<p>اختر ملف Excel بصيغة .xlsx أو .xls، ثم راجع البيانات واعتمد الصفوف الصالحة. تُضاف السجلات الجديدة فقط دون تغيير السجلات الحالية.</p><p class="muted">أعمدة النموذج: Email Address، الاسم الرباعي واللقب (مطلوب)، الكلية، القسم، الشهادة، العنوان الوظيفي او اللقب العلمي، رقم الهاتف. من كان قسمه «إدارة الأعمال» يُستورد من ملاك القسم، ومن كان قسمه غير ذلك يُستورد خارجياً. أيام التواجد تُضاف بعد الاستيراد من صفحة التدريسيون.</p><label>الصفوف التي لا تحدد القسم تُستورد بوصفها<select id="importType"><option value="">تدريسيي ملاك القسم</option><option value="external"'+(importType==='external'?' selected':'')+'>تدريسيين خارجيين</option></select></label><div class="tools"><button id="excelTemplate">تنزيل نموذج Excel</button></div><label>ملف التدريسيين<input id="excelFile" type="file" accept=".xlsx,.xls"></label><p class="muted">الحد الأقصى 5 ميغابايت و2000 صف في الورقة. تتم قراءة الملف محلياً في المتصفح.</p><div id="excelStatus" role="status">'+esc(importMessage)+'</div>'+(importBook?'<label>ورقة العمل<select id="excelSheet">'+importBook.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select></label>':'')+'<div id="excelPreview"></div>')+section('دليل معلومات التدريسيين',table([...TEMPLATE.map(f=>f[1]),'النوع'],db.teachers.map(t=>[...TEMPLATE.map(f=>t[f[0]]),typeLabel(t.type)].map(esc))));
 }
 let sheetJsPromise;
 function getSheetJs(){
@@ -393,10 +411,10 @@ function getSheetJs(){
 function showExcelPreview(){
  const target=document.getElementById('excelPreview');if(!target)return;
  const valid=importRows.filter(r=>!r.error);
- target.innerHTML='<p>عدد الصفوف: '+importRows.length+' · صالحة: '+valid.length+' · مستبعدة: '+(importRows.length-valid.length)+'</p>'+table(['الصف',...teacherColumns,'النتيجة'],importRows.map(r=>[r.row,...[r.name,r.days,r.rank,r.specialty,r.email,r.phone,r.error?'':typeLabel(r.type),r.affiliation].map(esc),r.error?'<span class="danger">'+esc(r.error)+'</span>':'جاهز للإضافة']))+(valid.length?'<button id="excelCommit">اعتماد '+valid.length+' تدريسي</button>':'');
+ target.innerHTML='<p>عدد الصفوف: '+importRows.length+' · صالحة: '+valid.length+' · مستبعدة: '+(importRows.length-valid.length)+'</p>'+table(['الصف',...PREVIEW.map(f=>f[1]),'النتيجة'],importRows.map(r=>[r.row,...PREVIEW.map(f=>esc(r[f[0]])),r.error?'<span class="danger">'+esc(r.error)+'</span>':'جاهز للإضافة']))+(valid.length?'<button id="excelCommit">اعتماد '+valid.length+' تدريسي</button>':'');
  const b=document.getElementById('excelCommit');if(b)b.onclick=()=>{
- const checked=validateTeacherRows([teacherColumns,...valid.map(r=>[r.name,r.days,r.rank,r.specialty,r.email,r.phone,typeLabel(r.type),r.affiliation])]).filter(r=>!r.error);
- const teachers=checked.map(({row,error,...t})=>({...t,id:uid()})),next={...db,teachers:[...db.teachers,...teachers]};
+ const fields=IMPORT_FIELDS.map(f=>f[0]),checked=validateTeacherRows([IMPORT_FIELDS.map(f=>f[1][0]),...valid.map(r=>fields.map(k=>k==='type'?r.typeText:r[k]))]).filter(r=>!r.error);
+ const teachers=checked.map(({row,error,typeText,...t})=>({...t,id:uid()})),next={...db,teachers:[...db.teachers,...teachers]};
  const prev=db;db=next;if(!save()){db=prev;return}importRows=[];importBook=null;importMessage='تمت إضافة '+teachers.length+' تدريسي بنجاح';render();toast(importMessage);
  };
 }
@@ -413,7 +431,7 @@ function selectExcelSheet(){
 }
 function bindAdmin(){
  document.getElementById('importType').onchange=e=>{importType=e.target.value;if(importBook)selectExcelSheet()};
- document.getElementById('excelTemplate').onclick=async()=>{try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([teacherColumns]);sheet['!cols']=teacherColumns.map(()=>({wch:25}));X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}};
+ document.getElementById('excelTemplate').onclick=async()=>{try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([TEMPLATE.map(f=>f[1])]);sheet['!cols']=[{wch:32},{wch:36},{wch:24},{wch:22},{wch:14},{wch:30},{wch:18}];X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}};
  document.getElementById('excelFile').onchange=async e=>{
  importRows=[];importBook=null;showExcelPreview();
  const f=e.target.files[0],status=document.getElementById('excelStatus');if(!f)return;
