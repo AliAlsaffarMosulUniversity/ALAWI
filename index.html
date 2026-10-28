@@ -216,8 +216,8 @@ function teacherDashboard(){
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
- return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (اختيارية للخارجي)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
- +section('دليل التدريسيين','<div class="tools"><button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
+ return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (مطلوبة لتوليد الجدول فقط)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
+ +section('دليل التدريسيين','<div class="tools">'+(isAdmin()?'<button data-action="quickImport">استيراد التدريسيين من Excel</button><button class="secondary" data-action="teacherTemplate">تنزيل نموذج Excel</button><input id="quickExcel" type="file" accept=".xlsx,.xls" hidden>':'')+'<button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+(isAdmin()?'<p class="muted">الاستيراد يضيف كل صفوف الملف دفعة واحدة. من كان قسمه «إدارة الأعمال» يُضاف إلى ملاك القسم، وغيره يُضاف خارجياً. الأسماء الموجودة مسبقاً تُتجاوز.</p>':'')+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
  +section('التدريسيون الخارجيون','<p class="muted">يظهرون في قوائم الاختيار تحت «تدريسيون خارجيون»، فيمكن تكليفهم بالمراقبات والمواد واللجان عند الحاجة.</p>'+teacherTable(db.teachers.filter(isExternal),true));
 }
 const teacherOrg=t=>[t.department,t.college].filter(Boolean).join(' – ')||t.affiliation||'';
@@ -300,7 +300,6 @@ document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const [form,id
 document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{editing=null;render()});
 bind('teacher',(d,f)=>{
  const days=new FormData(f).getAll('days'),nm=d.name.trim().replace(/\s+/g,' '),id=editId('teacher');
- if(!days.length&&d.type!=='external')return toast('اختر يوم تواجد واحداً على الأقل');
  if(db.teachers.some(t=>t.id!==id&&t.name.trim().replace(/\s+/g,' ')===nm))return toast('يوجد تدريسي بالاسم نفسه');
  if(id)(db.workloads||[]).forEach(w=>{if(w.teacher===id)w.name=nm});
  upsert('teacher',{name:nm,type:d.type==='external'?'external':'',college:d.college.trim(),department:d.department.trim(),degree:d.degree.trim(),rank:d.rank.trim(),specialty:d.specialty.trim(),email:d.email.trim(),phone:d.phone.trim(),days:DAYS.filter(x=>days.includes(x)).join('، ')});
@@ -353,7 +352,7 @@ function generateSchedule(){
  save();render();
 }
 function action(a){
-if(a==='csvTeachers')csv('teachers');if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
+if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0]);i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
 if(a==='backup')download('smart-department-backup-'+today()+'.json',JSON.stringify(db,null,2),'application/json');
 if(a==='generate'){if(!db.courses.length)return toast('أضف المواد أولاً');generateSchedule()}
 if(a==='migrate'&&confirm('رفع البيانات المحلية من هذا المتصفح إلى قاعدة البيانات المشتركة؟')){const x=structuredClone(localData);for(const k of CORE)db[k]=x[k]||[];db.schedule=x.schedule||[];db.scheduleStale=!!x.scheduleStale;db.workloads=x.workloads||[];db.workloadMeta=x.workloadMeta||db.workloadMeta;commit('جارٍ رفع البيانات إلى السحابة')}
@@ -429,9 +428,29 @@ function selectExcelSheet(){
  }catch(e){document.getElementById('excelStatus').textContent=e.message}
  showExcelPreview();
 }
+async function downloadTemplate(){try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([TEMPLATE.map(f=>f[1])]);sheet['!cols']=[{wch:32},{wch:36},{wch:24},{wch:22},{wch:14},{wch:30},{wch:18}];X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}}
+// استيراد مباشر من صفحة التدريسيون: أول ورقة في الملف، وتُضاف كل الصفوف الصالحة دون خطوة مراجعة
+async function quickImport(f){
+ if(!f)return;
+ if(!/\.(xlsx|xls)$/i.test(f.name)||f.size>5*1024*1024)return toast('اختر ملف Excel لا يتجاوز 5 ميغابايت');
+ toast('جارٍ قراءة الملف…');
+ try{
+  const X=await getSheetJs(),book=X.read(await f.arrayBuffer(),{type:'array',cellFormula:false,cellHTML:false}),sheet=book.Sheets[book.SheetNames[0]];
+  if(!sheet)throw Error('لا توجد أوراق عمل');
+  const range=X.utils.decode_range(sheet['!ref']||'A1');
+  if(range.e.r-range.s.r>2000)throw Error('الورقة تتجاوز 2000 صف');
+  const rows=validateTeacherRows(X.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:true}));
+  const teachers=rows.filter(r=>!r.error).map(({row,error,typeText,...t})=>({...t,id:uid()}));
+  const skipped=rows.filter(r=>r.error);
+  if(!teachers.length)return toast('لم يُضف أحد'+(skipped.length?': '+skipped.length+' صف مستبعد ('+[...new Set(skipped.map(r=>r.error))].join('، ')+')':''));
+  const prev=db;db={...db,teachers:[...db.teachers,...teachers]};if(!save()){db=prev;return}
+  const ext=teachers.filter(isExternal).length;
+  render();toast('تمت إضافة '+teachers.length+' تدريسي ('+(teachers.length-ext)+' من الملاك، '+ext+' خارجي)'+(skipped.length?'، واستُبعد '+skipped.length+' صف: '+[...new Set(skipped.map(r=>r.error))].join('، '):''));
+ }catch(e){toast('تعذر الاستيراد: '+e.message)}
+}
 function bindAdmin(){
  document.getElementById('importType').onchange=e=>{importType=e.target.value;if(importBook)selectExcelSheet()};
- document.getElementById('excelTemplate').onclick=async()=>{try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([TEMPLATE.map(f=>f[1])]);sheet['!cols']=[{wch:32},{wch:36},{wch:24},{wch:22},{wch:14},{wch:30},{wch:18}];X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}};
+ document.getElementById('excelTemplate').onclick=downloadTemplate;
  document.getElementById('excelFile').onchange=async e=>{
  importRows=[];importBook=null;showExcelPreview();
  const f=e.target.files[0],status=document.getElementById('excelStatus');if(!f)return;
