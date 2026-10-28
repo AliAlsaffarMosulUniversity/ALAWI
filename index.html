@@ -156,7 +156,9 @@ const splitList=v=>Array.isArray(v)?v:String(v??'').split(/[,،;؛\n]/).map(s=>s
 const teacherDays=t=>splitList(t?.days).filter(d=>DAYS.includes(d));
 const roomKey=s=>String(s??'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\s+/g,'').toLowerCase();
 const editId=f=>editing?.form===f?editing.id:null;
-const opts=()=>db.teachers.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('');
+const isExternal=t=>t?.type==='external';
+const optList=list=>list.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('');
+const opts=()=>{const ext=db.teachers.filter(isExternal);return ext.length?'<optgroup label="ملاك القسم">'+optList(db.teachers.filter(t=>!isExternal(t)))+'</optgroup><optgroup label="تدريسيون خارجيون">'+optList(ext)+'</optgroup>':optList(db.teachers)};
 function stamp(){let n=Date.now();for(const k of [...CORE,'workloads'])(db[k]||[]).forEach(r=>{if(r.createdAt==null)r.createdAt=n++})}
 function save(){stamp();if(cloud.on){queuePush();return true}try{localStorage.setItem(key,JSON.stringify(db));return true}catch{toast('تعذر الحفظ؛ صدّر نسخة احتياطية من بياناتك');return false}}
 function toast(t){const el=$('#toast');el.textContent=t;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',3500)}
@@ -165,6 +167,7 @@ function field(n,title,type='text',required=true,cls=''){return '<label'+(cls?' 
 function teacherField(n='teacher',title='التدريسي'){return '<label>'+title+'<select name="'+n+'" required><option value="">اختر التدريسي</option>'+opts()+'</select></label>'}
 function checks(n,items){return '<div class="chips">'+items.map(([v,l])=>'<label class="chip"><input type="checkbox" name="'+n+'" value="'+esc(v)+'">'+esc(l)+'</label>').join('')+'</div>'}
 function name(id){return db.teachers.find(t=>t.id===id)?.name||'غير محدد'}
+function nameTag(id){return esc(name(id))+(isExternal(db.teachers.find(t=>t.id===id))?' '+pill('info','خارجي'):'')}
 function pill(type,text){return '<span class="pill '+type+'">'+text+'</span>'}
 function table(headers,rows){return rows.length?'<div class="scroll"><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="empty">لا توجد سجلات بعد. أضف أول سجل للبدء.</p>'}
 function form(id,body,button='حفظ'){const ed=editing?.form===id;return '<form id="'+id+'">'+body+'<div class="form-actions"><button>'+(ed?'حفظ التعديل':button)+'</button>'+(ed?'<button type="button" class="secondary" data-cancel>إلغاء التعديل</button>':'')+'</div></form>'}
@@ -182,7 +185,7 @@ function remove(f,id){
  if(col==='courses'||col==='teachers')db.scheduleStale=true;
  commit('تم الحذف');
 }
-function csv(kind){const rows=kind==='schedule'?[['اليوم','الفترة','المادة','التدريسي','القاعة'],...db.schedule.map(x=>[x.day,x.slot,x.course,name(x.teacher),x.room])]:[['الاسم','اللقب العلمي','التخصص','أيام التواجد','البريد الإلكتروني','الهاتف'],...db.teachers.map(x=>[x.name,x.rank,x.specialty,x.days,x.email,x.phone])];download(kind+'.csv','﻿'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+function csv(kind){const rows=kind==='schedule'?[['اليوم','الفترة','المادة','التدريسي','القاعة'],...db.schedule.map(x=>[x.day,x.slot,x.course,name(x.teacher),x.room])]:[['الاسم','النوع','الجهة','اللقب العلمي','التخصص','أيام التواجد','البريد الإلكتروني','الهاتف'],...db.teachers.map(x=>[x.name,isExternal(x)?'خارجي':'ملاك القسم',x.affiliation,x.rank,x.specialty,x.days,x.email,x.phone])];download(kind+'.csv','﻿'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')}
 function download(file,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=file;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function bind(id,fn){const f=document.getElementById(id);if(f)f.onsubmit=e=>{e.preventDefault();fn(Object.fromEntries(new FormData(f)),f)}}
 
@@ -213,8 +216,12 @@ function teacherDashboard(){
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
- return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>اللقب العلمي<select name="rank"><option value="">غير محدد</option>'+RANKS.map(r=>'<option>'+r+'</option>').join('')+'</select></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
- +section('دليل التدريسيين','<div class="tools"><button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+table(['الاسم','اللقب','التخصص','أيام التواجد','التواصل',''],db.teachers.map(t=>[esc(t.name),esc(t.rank||'—'),esc(t.specialty||'—'),teacherDays(t).length?esc(teacherDays(t).join('، ')):pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',actions('teacher',t.id)])));
+ return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('affiliation','الجهة (للخارجي)','text',false)+'<label>اللقب العلمي<select name="rank"><option value="">غير محدد</option>'+RANKS.map(r=>'<option>'+r+'</option>').join('')+'</select></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (اختيارية للخارجي)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
+ +section('دليل التدريسيين','<div class="tools"><button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
+ +section('التدريسيون الخارجيون','<p class="muted">يظهرون في قوائم الاختيار تحت «تدريسيون خارجيون»، فيمكن تكليفهم بالمراقبات والمواد واللجان عند الحاجة.</p>'+teacherTable(db.teachers.filter(isExternal),true));
+}
+function teacherTable(list,ext){
+ return table(['الاسم',ext?'الجهة':'اللقب','التخصص','أيام التواجد','التواصل',''],list.map(t=>[esc(t.name)+(ext&&t.rank?'<br><small class="muted">'+esc(t.rank)+'</small>':''),esc((ext?t.affiliation:t.rank)||'—'),esc(t.specialty||'—'),teacherDays(t).length?esc(teacherDays(t).join('، ')):ext?'—':pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',actions('teacher',t.id)]));
 }
 function announcementsView(){
  const admin=role==='admin';
@@ -244,7 +251,7 @@ function coursesView(){
 }
 function invigilationView(){
  return (isAdmin()?section(formTitle('invigilation','إضافة مراقبة امتحانية','تعديل مراقبة'),form('invigilation',field('exam','الامتحان')+teacherField()+field('date','التاريخ','date')+field('start','البداية','time')+field('end','النهاية','time')+field('room','القاعة'),'إضافة المراقبة')+'<p class="muted">يُفحص تداخل مراقبات التدريسي وحجز القاعة في اليوم والوقت نفسيهما.</p>'):'')
- +section('جدول المراقبات',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),esc(name(x.teacher)),esc(x.date),'<span dir="ltr">'+esc(x.start)+' – '+esc(x.end)+'</span>',esc(x.room),actions('invigilation',x.id)])));
+ +section('جدول المراقبات',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),nameTag(x.teacher),esc(x.date),'<span dir="ltr">'+esc(x.start)+' – '+esc(x.end)+'</span>',esc(x.room),actions('invigilation',x.id)])));
 }
 function tasksView(){
  return (isAdmin()?section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('due','آخر موعد','date'),'إضافة التكليف')):'')
@@ -292,10 +299,10 @@ document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const [form,id
 document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{editing=null;render()});
 bind('teacher',(d,f)=>{
  const days=new FormData(f).getAll('days'),nm=d.name.trim().replace(/\s+/g,' '),id=editId('teacher');
- if(!days.length)return toast('اختر يوم تواجد واحداً على الأقل');
+ if(!days.length&&d.type!=='external')return toast('اختر يوم تواجد واحداً على الأقل');
  if(db.teachers.some(t=>t.id!==id&&t.name.trim().replace(/\s+/g,' ')===nm))return toast('يوجد تدريسي بالاسم نفسه');
  if(id)(db.workloads||[]).forEach(w=>{if(w.teacher===id)w.name=nm});
- upsert('teacher',{name:nm,rank:d.rank,specialty:d.specialty.trim(),email:d.email.trim(),phone:d.phone.trim(),days:DAYS.filter(x=>days.includes(x)).join('، ')});
+ upsert('teacher',{name:nm,type:d.type==='external'?'external':'',affiliation:d.type==='external'?d.affiliation.trim():'',rank:d.rank,specialty:d.specialty.trim(),email:d.email.trim(),phone:d.phone.trim(),days:DAYS.filter(x=>days.includes(x)).join('، ')});
  db.scheduleStale=true;commit(id?'تم حفظ التعديل':'تمت إضافة التدريسي');
 });
 bind('announcement',(d,f)=>{const file=f.elements.file.files[0]?.name,rec={title:d.title.trim(),body:d.body.trim()};if(file)rec.file=file;if(!editId('announcement'))Object.assign(rec,{date:new Date().toLocaleString('ar-IQ'),file:file||'',read:[]});const ed=editId('announcement');upsert('announcement',rec);commit(ed?'تم حفظ التعديل':'تم نشر التبليغ على هذا المتصفح')});
@@ -352,27 +359,30 @@ if(a==='migrate'&&confirm('رفع البيانات المحلية من هذا ا
 }
 
 let importRows=[],importBook=null,importMessage='';
-const teacherColumns=['الاسم','أيام التواجد','اللقب العلمي','التخصص','البريد الإلكتروني','الهاتف'];
+const teacherColumns=['الاسم','أيام التواجد','اللقب العلمي','التخصص','البريد الإلكتروني','الهاتف','النوع','الجهة'];
+let importType='';
+const typeLabel=t=>t==='external'?'خارجي':'ملاك القسم';
+function parseType(v){v=norm(v);if(!v)return importType;if(/خارج/.test(v))return 'external';if(/ملاك|القسم|داخل/.test(v))return '';return null}
 const norm=v=>String(v??'').trim().replace(/\s+/g,' ');
 const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 function validateTeacherRows(rows){
  if(!rows.length)throw Error('الورقة فارغة');
- const headers=rows[0].map(norm), aliases=[['الاسم','اسم التدريسي','الاسم الكامل'],['أيام التواجد','الأيام المتاحة','الايام المتاحة'],['اللقب العلمي'],['التخصص'],['البريد الإلكتروني','البريد الالكتروني'],['الهاتف','رقم الهاتف']];
+ const headers=rows[0].map(norm), aliases=[['الاسم','اسم التدريسي','الاسم الكامل'],['أيام التواجد','الأيام المتاحة','الايام المتاحة'],['اللقب العلمي'],['التخصص'],['البريد الإلكتروني','البريد الالكتروني'],['الهاتف','رقم الهاتف'],['النوع','نوع التدريسي'],['الجهة','جهة الانتساب']];
  const indexes=aliases.map(a=>headers.findIndex(h=>a.includes(h)));
  if(indexes[0]<0)throw Error('يجب أن يحتوي الصف الأول على عمود الاسم أو اسم التدريسي');
  const seen=new Set(db.teachers.map(t=>norm(t.name)));
  return rows.slice(1).map((row,i)=>{
  const values=indexes.map(j=>j<0?'':norm(row[j]));
  if(!values.some(Boolean))return null;
- const [name,rawDays,rank,specialty,email,phone]=values;
+ const [name,rawDays,rank,specialty,email,phone,rawType,affiliation]=values,type=parseType(rawType);
  const days=[...new Set(rawDays.split(/[,،;؛\n]/).map(norm).filter(Boolean))];
- let error=!name?'الاسم مطلوب':name.length>150?'الاسم طويل جداً':seen.has(name)?'اسم مكرر في الملف أو الدليل':days.some(d=>!dayNames.includes(d))?'أيام تواجد غير صحيحة':email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'بريد إلكتروني غير صحيح':'';
+ let error=!name?'الاسم مطلوب':name.length>150?'الاسم طويل جداً':seen.has(name)?'اسم مكرر في الملف أو الدليل':days.some(d=>!dayNames.includes(d))?'أيام تواجد غير صحيحة':email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'بريد إلكتروني غير صحيح':type===null?'النوع يجب أن يكون «ملاك القسم» أو «خارجي»':'';
  if(!error)seen.add(name);
- return {row:i+2,name,days:days.join('، '),rank,specialty,email,phone,error};
+ return {row:i+2,name,days:days.join('، '),rank,specialty,email,phone,type:type||'',affiliation:type==='external'?affiliation:'',error};
  }).filter(Boolean);
 }
 function adminView(){
-return section('الإدارة · استيراد بيانات التدريسيين','<p>اختر ملف Excel بصيغة .xlsx أو .xls، ثم راجع البيانات واعتمد الصفوف الصالحة. تُضاف السجلات الجديدة فقط دون تغيير السجلات الحالية.</p><p class="muted">العمود المطلوب: الاسم. اختياري: أيام التواجد، اللقب العلمي، التخصص، البريد الإلكتروني، الهاتف. افصل أيام التواجد بفاصلة؛ تركها فارغة يستلزم إضافتها قبل توليد الجدول.</p><div class="tools"><button id="excelTemplate">تنزيل نموذج Excel</button></div><label>ملف التدريسيين<input id="excelFile" type="file" accept=".xlsx,.xls"></label><p class="muted">الحد الأقصى 5 ميغابايت و2000 صف في الورقة. تتم قراءة الملف محلياً في المتصفح.</p><div id="excelStatus" role="status">'+esc(importMessage)+'</div>'+(importBook?'<label>ورقة العمل<select id="excelSheet">'+importBook.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select></label>':'')+'<div id="excelPreview"></div>')+section('دليل معلومات التدريسيين',table(teacherColumns,db.teachers.map(t=>[t.name,t.days,t.rank,t.specialty,t.email,t.phone].map(esc))));
+return section('الإدارة · استيراد بيانات التدريسيين','<p>اختر ملف Excel بصيغة .xlsx أو .xls، ثم راجع البيانات واعتمد الصفوف الصالحة. تُضاف السجلات الجديدة فقط دون تغيير السجلات الحالية.</p><p class="muted">العمود المطلوب: الاسم. اختياري: أيام التواجد، اللقب العلمي، التخصص، البريد الإلكتروني، الهاتف، النوع (ملاك القسم أو خارجي)، الجهة. افصل أيام التواجد بفاصلة؛ تركها فارغة يستلزم إضافتها قبل توليد الجدول.</p><label>الصفوف التي لا تحدد النوع تُستورد بوصفها<select id="importType"><option value="">تدريسيي ملاك القسم</option><option value="external"'+(importType==='external'?' selected':'')+'>تدريسيين خارجيين</option></select></label><div class="tools"><button id="excelTemplate">تنزيل نموذج Excel</button></div><label>ملف التدريسيين<input id="excelFile" type="file" accept=".xlsx,.xls"></label><p class="muted">الحد الأقصى 5 ميغابايت و2000 صف في الورقة. تتم قراءة الملف محلياً في المتصفح.</p><div id="excelStatus" role="status">'+esc(importMessage)+'</div>'+(importBook?'<label>ورقة العمل<select id="excelSheet">'+importBook.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select></label>':'')+'<div id="excelPreview"></div>')+section('دليل معلومات التدريسيين',table(teacherColumns,db.teachers.map(t=>[t.name,t.days,t.rank,t.specialty,t.email,t.phone,typeLabel(t.type),t.affiliation].map(esc))));
 }
 let sheetJsPromise;
 function getSheetJs(){
@@ -383,9 +393,9 @@ function getSheetJs(){
 function showExcelPreview(){
  const target=document.getElementById('excelPreview');if(!target)return;
  const valid=importRows.filter(r=>!r.error);
- target.innerHTML='<p>عدد الصفوف: '+importRows.length+' · صالحة: '+valid.length+' · مستبعدة: '+(importRows.length-valid.length)+'</p>'+table(['الصف',...teacherColumns,'النتيجة'],importRows.map(r=>[r.row,...[r.name,r.days,r.rank,r.specialty,r.email,r.phone].map(esc),r.error?'<span class="danger">'+esc(r.error)+'</span>':'جاهز للإضافة']))+(valid.length?'<button id="excelCommit">اعتماد '+valid.length+' تدريسي</button>':'');
+ target.innerHTML='<p>عدد الصفوف: '+importRows.length+' · صالحة: '+valid.length+' · مستبعدة: '+(importRows.length-valid.length)+'</p>'+table(['الصف',...teacherColumns,'النتيجة'],importRows.map(r=>[r.row,...[r.name,r.days,r.rank,r.specialty,r.email,r.phone,r.error?'':typeLabel(r.type),r.affiliation].map(esc),r.error?'<span class="danger">'+esc(r.error)+'</span>':'جاهز للإضافة']))+(valid.length?'<button id="excelCommit">اعتماد '+valid.length+' تدريسي</button>':'');
  const b=document.getElementById('excelCommit');if(b)b.onclick=()=>{
- const checked=validateTeacherRows([teacherColumns,...valid.map(r=>[r.name,r.days,r.rank,r.specialty,r.email,r.phone])]).filter(r=>!r.error);
+ const checked=validateTeacherRows([teacherColumns,...valid.map(r=>[r.name,r.days,r.rank,r.specialty,r.email,r.phone,typeLabel(r.type),r.affiliation])]).filter(r=>!r.error);
  const teachers=checked.map(({row,error,...t})=>({...t,id:uid()})),next={...db,teachers:[...db.teachers,...teachers]};
  const prev=db;db=next;if(!save()){db=prev;return}importRows=[];importBook=null;importMessage='تمت إضافة '+teachers.length+' تدريسي بنجاح';render();toast(importMessage);
  };
@@ -402,6 +412,7 @@ function selectExcelSheet(){
  showExcelPreview();
 }
 function bindAdmin(){
+ document.getElementById('importType').onchange=e=>{importType=e.target.value;if(importBook)selectExcelSheet()};
  document.getElementById('excelTemplate').onclick=async()=>{try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([teacherColumns]);sheet['!cols']=teacherColumns.map(()=>({wch:25}));X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}};
  document.getElementById('excelFile').onchange=async e=>{
  importRows=[];importBook=null;showExcelPreview();
