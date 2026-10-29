@@ -255,6 +255,17 @@ tr.day-start td,tr.day-start th{border-top:3px solid var(--line-2)}
 .duty small{color:var(--muted)}
 .section-like{margin-top:16px}.section-like>summary{cursor:pointer;font-weight:600;padding:10px 0}
 @media(max-width:700px){.plan-form{grid-template-columns:1fr}.bars>div{grid-template-columns:110px 1fr 30px}}
+.smart-panel{border:1px solid color-mix(in srgb,var(--primary) 35%,var(--line));border-radius:14px;padding:10px 14px;margin:0 0 14px;background:linear-gradient(135deg,var(--primary-soft),var(--surface) 60%)}
+.smart-panel>summary{cursor:pointer;font-weight:700}
+.smart-panel form{display:grid;gap:10px;margin-top:10px}
+.smart-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.room-in{display:flex;align-items:center;gap:4px;font-weight:600}.room-in input{width:90px}
+.smart-table{border-collapse:collapse;min-width:640px;width:100%;font-size:13px}
+.smart-table th{background:var(--surface-2);padding:6px;text-align:right}
+.smart-table td{padding:4px;border-bottom:1px solid var(--line)}
+.smart-table input,.smart-table select{width:100%;min-width:90px;padding:6px}
+.smart-table td:nth-child(2) input{width:70px;min-width:0}
+.away-list{display:grid;gap:4px;margin-bottom:8px}.away-list>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -597,9 +608,100 @@ function scheduleBoard(){
  const items=all.filter(x=>studyOf(x)===schedStudy),n=schedStage,its=items.filter(x=>x.stage===n),secs=stageSections(schedStudy,n);
  return '<div class="tools"><div class="study-tabs" role="tablist">'+STUDIES.map(([k,l])=>'<button role="tab" aria-selected="'+(k===schedStudy)+'" class="'+(k===schedStudy?'active':'')+'" data-study="'+k+'">'+(k==='morning'?'☀️ ':'🌙 ')+l+'</button>').join('')+'</div>'+filter+'</div>'
   +'<div class="stage-chips" role="tablist">'+[1,2,3,4].map(k=>{const c=items.filter(x=>x.stage===k).length;return '<button role="tab" aria-selected="'+(k===n)+'" class="'+(k===n?'active':'')+(c?'':' pending')+'" data-stage="'+k+'"><b>'+k+'</b>'+stageName(k)+'<small>'+(c?stageSections(schedStudy,k).length+' شعب':'لم يصدر')+'</small></button>'}).join('')+'</div>'
+  +(isAdmin()?smartPanel(schedStudy,n):'')
   +'<div class="stage-block">'+(secs.length
    ?'<div class="stage-head"><h3><span class="stage-no">'+n+'</span>'+stageName(n)+' · الدراسة '+studyName(schedStudy)+'</h3><span class="muted">'+secs.length+' شعب · '+its.length+' ساعة</span>'+(isAdmin()?'<button class="btn-sm secondary" data-tt-addsec>+ شعبة</button><button class="btn-sm ghost-danger" data-tt-clear>مسح الجدول</button>':'')+'<button class="btn-sm secondary" data-print-stage>طباعة</button></div>'+stageGrid(schedStudy,n,its,secs)
    :'<div class="tt-pending"><span>⏳</span><b>لم يصدر جدول '+stageName(n)+' للدراسة '+studyName(schedStudy)+' بعد</b><small>هذه الخانة محجوزة لها. عند صدور الجدول استورده من ملف Excel، أو أنشئ جدولاً فارغاً وأضف الحصص بالضغط على الخانات.</small>'+(isAdmin()?'<div class="tools"><button data-action="ttImport">📥 استيراد من Excel</button><button class="secondary" data-tt-blank>إنشاء جدول فارغ</button></div>':'')+'</div>')+'</div>';
+}
+// ---------------------------------------------------------------- الجدول الذكي: خطة تدريس المرحلة ثم إنشاء الجدول بضغطة زر
+// الخطة لكل دراسة ومرحلة: قاعة كل شعبة، أيام الدوام، والمواد بساعاتها الأسبوعية وتدريسي كل شعبة
+const ttPlan=(st,n)=>{db.ttPlans=db.ttPlans||{};return db.ttPlans[st+n]||(db.ttPlans[st+n]={rooms:{},days:[...DAYS],courses:[]})};
+const planSecs=(st,n)=>{const s=stageSections(st,n);return s.length?s:['A','B','C','D']};
+function planFromTimetable(st,n){
+ const P=ttPlan(st,n),its=sched().filter(x=>studyOf(x)===st&&x.stage===n&&x.kind!=='محاضرة إرشادية'),map=new Map();
+ for(const x of its){const c=map.get(x.course)||{name:x.course,hours:0,per:{},teachers:{}};c.per[secOf(x)]=(c.per[secOf(x)]||0)+1;if(x.teacher&&!c.teachers[secOf(x)])c.teachers[secOf(x)]=x.teacher;map.set(x.course,c)}
+ P.courses=[...map.values()].map(c=>({name:c.name,hours:Math.max(...Object.values(c.per)),teachers:c.teachers}));
+ for(const x of its)if(x.room&&!P.rooms[secOf(x)])P.rooms[secOf(x)]=x.room;
+ return P.courses.length;
+}
+function smartPanel(st,n){
+ const P=ttPlan(st,n),secs=planSecs(st,n),sel=(sec,v,i)=>'<select data-pt="'+i+'|'+sec+'"><option value="">—</option>'+opts().replace('value="'+esc(v)+'"','value="'+esc(v)+'" selected')+'</select>';
+ const total=P.courses.reduce((a,c)=>a+(Number(c.hours)||0),0);
+ return '<details class="smart-panel"'+(P.courses.length?'':' open')+'><summary>🧠 الجدول الذكي — خطة تدريس '+stageName(n)+' ('+P.courses.length+' مادة · '+total+' ساعة لكل شعبة)</summary>'
+  +'<form id="smartForm" data-st="'+st+'" data-n="'+n+'"><p class="muted">حدّد المواد وساعاتها الأسبوعية وتدريسي كل شعبة وقاعتها، ثم اضغط «إنشاء الجدول». يضع النظام المحاضرات بساعتين متتاليتين، ويمنع تعارض التدريسي والقاعة مع كل المراحل والدراستين، ويوزّع ساعات كل شعبة على أيام الأسبوع.</p>'
+  +'<div class="smart-row"><span class="muted">أيام الدوام:</span><div class="chips">'+DAYS.map(d=>'<label class="chip"><input type="checkbox" name="day" value="'+d+'"'+(P.days.includes(d)?' checked':'')+'>'+d+'</label>').join('')+'</div></div>'
+  +'<div class="smart-row"><span class="muted">قاعة كل شعبة:</span>'+secs.map(sec=>'<label class="room-in">'+sec+'<input name="room-'+sec+'" value="'+esc(P.rooms[sec]||'')+'" placeholder="مثل 3201"></label>').join('')+'</div>'
+  +'<div class="scroll"><table class="smart-table"><thead><tr><th>المادة</th><th>ساعات/أسبوع</th>'+secs.map(sec=>'<th>تدريسي الشعبة '+sec+'</th>').join('')+'<th></th></tr></thead><tbody>'
+  +P.courses.map((c,i)=>'<tr><td><input data-pn="'+i+'" value="'+esc(c.name)+'"></td><td><input data-ph="'+i+'" type="number" min="1" max="12" value="'+esc(c.hours)+'"></td>'+secs.map(sec=>'<td>'+sel(sec,c.teachers?.[sec]||'',i)+'</td>').join('')+'<td><button type="button" class="chip-x" data-pdel="'+i+'" aria-label="حذف المادة">×</button></td></tr>').join('')
+  +'</tbody></table></div>'
+  +'<div class="tools"><button type="button" class="secondary" data-padd>+ مادة</button><button type="button" class="secondary" data-pfrom>استخراج الخطة من الجدول الحالي</button><button type="button" class="secondary" data-pcurr>استيراد المواد من ملف المنهاج</button><input type="file" id="currFile" accept=".xlsx,.xls" hidden><button type="button" class="secondary" data-psave>حفظ الخطة</button></div>'
+  +'<div class="form-actions"><button type="button" data-pgen>🧠 إنشاء جدول '+stageName(n)+' بضغطة زر</button><button type="button" class="secondary" data-pgenall>إنشاء جداول كل مراحل الدراسة '+studyName(st)+'</button></div></form></details>';
+}
+function readSmartForm(f){
+ const st=f.dataset.st,n=Number(f.dataset.n),P=ttPlan(st,n),secs=planSecs(st,n);
+ P.days=[...f.querySelectorAll('[name=day]:checked')].map(x=>x.value);
+ secs.forEach(sec=>{P.rooms[sec]=(f.elements['room-'+sec]?.value||'').trim()});
+ P.courses=P.courses.map((c,i)=>({name:(f.querySelector('[data-pn="'+i+'"]')?.value||c.name).trim(),hours:Math.max(0,Number(f.querySelector('[data-ph="'+i+'"]')?.value)||0),teachers:Object.fromEntries(secs.map(sec=>[sec,f.querySelector('[data-pt="'+i+'|'+sec+'"]')?.value||''])) })).filter(c=>c.name);
+ if(!db.ttSections?.[st+n]){db.ttSections=db.ttSections||{};db.ttSections[st+n]=secs}
+ return {st,n,P,secs};
+}
+function generateStage(st,n){
+ const P=ttPlan(st,n),secs=planSecs(st,n),slots=studySlots(st),days=P.days.length?P.days:DAYS;
+ if(!P.courses.length)return {placed:0,failed:[stageName(n)+': لا مواد في الخطة']};
+ const others=db.schedule.filter(x=>SLOTS.includes(x.slot)&&!(studyOf(x)===st&&x.stage===n));
+ const tDays=id=>{const d=teacherDays(db.teachers.find(t=>t.id===id));return d.length?d:DAYS};
+ // القاعات البديلة: كل قاعات القسم المعروفة، تُستعمل فقط إذا كانت قاعة الشعبة مشغولة (كما يحدث في جداول القسم)
+ const roomPool=[...new Set([...sched().map(x=>x.room),...Object.values(db.ttPlans||{}).flatMap(q=>Object.values(q.rooms||{}))].filter(Boolean))];
+ const blocks=[];for(const sec of secs)for(const c of P.courses){let h=Number(c.hours)||0;const t=c.teachers?.[sec]||'';while(h>0){const len=h>=2?2:1;blocks.push({sec,c,t,len});h-=len}}
+ const load={};blocks.forEach(b=>{if(b.t)load[b.t]=(load[b.t]||0)+b.len});
+ const freeDays=x=>x.t?tDays(x.t).length:9;
+ // محاولات عدة بترتيب وعشوائية مختلفين، ويُعتمد أفضلها (أقل محاضرات متعذرة)
+ let bestRun=null;
+ for(let attempt=0;attempt<30&&!(bestRun&&!bestRun.failed.length);attempt++){
+  const result=[],failed=[],noise=attempt?2:0,at=(day,slot)=>[...others,...result].filter(x=>x.day===day&&x.slot===slot);
+  const order=[...blocks].sort((a,b)=>freeDays(a)-freeDays(b)||(load[b.t]||0)-(load[a.t]||0)||b.len-a.len||(attempt?Math.random()-.5:0));
+  for(const b of order){
+   const home=P.rooms[b.sec]||'',okDays=days.filter(d=>!b.t||tDays(b.t).includes(d));let best=null;
+   for(const day of okDays)for(let si=0;si+b.len<=slots.length;si++){
+    const span=slots.slice(si,si+b.len),busy=span.flatMap(sl=>at(day,sl));
+    if(busy.some(x=>(studyOf(x)===st&&x.stage===n&&secOf(x)===b.sec)||(b.t&&x.teacher===b.t)))continue;
+    const roomFree=r=>!r||!busy.some(x=>roomKey(x.room)===roomKey(r));
+    const room=roomFree(home)?home:roomPool.find(r=>roomFree(r));if(room===undefined)continue;
+    const secDay=result.filter(x=>x.section===b.sec&&x.day===day).length,sameC=result.some(x=>x.section===b.sec&&x.day===day&&x.course===b.c.name);
+    const score=(sameC?100:0)+secDay*8+(b.t?[...others,...result].filter(x=>x.teacher===b.t&&x.day===day).length*3:0)+(b.len===2&&si%2?5:0)+si+(room!==home?15:0)+Math.random()*noise;
+    if(!best||score<best.score)best={day,span,score,room};
+   }
+   if(!best){failed.push(b.c.name+' ('+b.sec+')');continue}
+   best.span.forEach(sl=>result.push({id:uid(),gen:true,course:b.c.name,kind:'نظري',teacher:b.t,tname:'',room:best.room,study:st,stage:n,section:b.sec,day:best.day,slot:sl}));
+  }
+  if(!bestRun||failed.length<bestRun.failed.length)bestRun={result,failed};
+ }
+ db.schedule=[...db.schedule.filter(x=>!(studyOf(x)===st&&x.stage===n)),...bestRun.result];
+ return {placed:bestRun.result.length,failed:bestRun.failed.map(f=>stageName(n)+': '+f)};
+}
+function runGenerate(list){
+ let placed=0,failed=[];for(const [st,n] of list){const r=generateStage(st,n);placed+=r.placed;failed=failed.concat(r.failed)}
+ const uniq=[...new Set(failed)].map(f=>f+(failed.filter(x=>x===f).length>1?' ×'+failed.filter(x=>x===f).length:''));
+ scheduleMsg=failed.length?['warn','🧠 وُضعت '+placed+' ساعة. تعذر وضع '+failed.length+' محاضرة: '+uniq.join('، ')+'. خفّف القيود (أيام الدوام، أيام تواجد التدريسيين، القاعات) أو عدّل يدوياً.']:['ok','🧠 أُنشئ الجدول: '+placed+' ساعة دون أي تعارض في التدريسيين أو القاعات أو الشعب.'];
+ commit(failed.length?'أُنشئ الجدول مع ملاحظات':'✓ أُنشئ الجدول');
+}
+// ---------------------------------------------------------------- استيراد المواد من ملف المنهاج (المرحلة = فصلان)
+async function importCurriculum(file,st,n,term){
+ try{
+  const X=await getSheetJs(),book=X.read(await file.arrayBuffer(),{type:'array'}),rows=X.utils.sheet_to_json(book.Sheets[book.SheetNames[0]],{header:1,defval:'',raw:false});
+  const W={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8},want=(n-1)*2+term,out=[];let sem=0,nameCol=-1,hourCols=[],semCol=1;
+  for(const row of rows){
+   const iName=row.findIndex(c=>hk(c).includes('اسم الماده'));if(iName>=0){nameCol=iName;const iSem=row.findIndex(c=>/semester/i.test(c));if(iSem>=0)semCol=iSem;continue}
+   if(row.some(c=>/hr\/w/i.test(c))&&row.some(c=>/^CL/i.test(String(c).trim()))){hourCols=row.map((c,i)=>/hr\/w/i.test(c)?i:-1).filter(i=>i>=0);continue}
+   const w=String(row[semCol]||'').trim().toLowerCase();if(W[w])sem=W[w];
+   if(sem!==want||nameCol<0)continue;const nm=norm(row[nameCol]);if(!nm||/total/i.test(row.join(' ')))continue;
+   const hrs=hourCols.reduce((a,i)=>a+(parseFloat(String(row[i]).split('/')[0])||0),0);
+   out.push({name:nm,hours:Math.round(hrs)||2,teachers:{}});
+  }
+  if(!out.length)return toast('لم أجد مواد للفصل '+want+' في هذا الملف');
+  const P=ttPlan(st,n),have=new Set(P.courses.map(c=>hk(c.name)));out.forEach(c=>{if(!have.has(hk(c.name)))P.courses.push(c)});
+  commit('أُضيفت '+out.length+' مادة من المنهاج ('+(term===1?'الكورس الأول':'الكورس الثاني')+'). حدّد تدريسي كل شعبة ثم أنشئ الجدول');
+ }catch(e){toast('تعذر قراءة ملف المنهاج: '+e.message)}
 }
 const sameLesson=(a,b)=>!!a&&!!b&&a.course===b.course&&(a.teacher||a.tname)===(b.teacher||b.tname)&&a.room===b.room&&(a.kind||'')===(b.kind||'');
 function stageGrid(st,n,items,secs){
@@ -711,9 +813,12 @@ async function ttImport(file){
 // الخطة: أيام امتحان × قاعات، لكل قاعة عدد من المراقبين أولهم رئيس القاعة، وعمود احتياط لكل يوم
 const WEEKDAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const dayOfDate=d=>WEEKDAYS[new Date(d+'T00:00').getDay()];
-const defaultPlan=()=>({title:'جدول المراقبات الامتحانية',rooms:['3202','3203','3205','3206','3208','3209','3409','2406','2408','2409'],dates:[],perRoom:3,reserves:2,exclude:[],grid:{}});
+const defaultPlan=()=>({title:'جدول المراقبات الامتحانية',rooms:['3202','3203','3205','3206','3208','3209','3409','2406','2408','2409'],dates:[],perRoom:3,reserves:2,exclude:[],heads:null,away:{},grid:{}});
 const plan=()=>db.examPlan||(db.examPlan=defaultPlan());
 const poolIds=()=>db.teachers.filter(t=>!plan().exclude.includes(t.id)).map(t=>t.id);
+// رؤساء القاعات: من يحددهم رئيس القسم، وإن لم يحدد أحداً فحملة الدكتوراه والألقاب العليا
+const isHead=id=>Array.isArray(plan().heads)?plan().heads.includes(id):isSenior(id);
+const isAway=(id,date)=>(plan().away?.[id]||[]).includes(date);
 // رئيس القاعة يُفضَّل أن يكون من حملة الدكتوراه أو من الألقاب العليا، كما في فورمة القسم
 const isSenior=id=>{const t=db.teachers.find(x=>x.id===id)||{};return /دكتوراه/.test(t.degree||'')||/^د\s*\./.test(t.name||'')||/^(أ|ا)ستاذ/.test(t.rank||'')};
 function shortName(id){const t=db.teachers.find(x=>x.id===id);if(!t)return '—';const w=String(t.name).replace(/^(د|أ|م|م\.م)\.\s*/,'').split(/\s+/).filter(Boolean);return (isSenior(id)?'د.':'أ.')+(w.length>1?w[0]+' '+w.at(-1):w[0]||'')}
@@ -728,17 +833,17 @@ function distribute(){
  p.grid={};let short=0;
  for(const date of [...p.dates].sort()){
   const used=new Set(),g={rooms:{},reserve:[]};
-  const pick=(room,prefSenior,mates)=>{
+  const pick=(room,headSlot,mates)=>{
    let best=null,bs=Infinity;
-   for(const id of pool){if(used.has(id))continue;
-    const sc=count[id]*10+(rooms[id]?.includes(room)?4:0)+mates.reduce((n,m)=>n+(pairs[[id,m].sort().join()]||0),0)*3+(prefSenior&&!isSenior(id)?25:0)+rnd[id];
+   for(const id of pool){if(used.has(id)||isAway(id,date))continue;
+    const sc=count[id]*10+(rooms[id]?.includes(room)?4:0)+mates.reduce((n,m)=>n+(pairs[[id,m].sort().join()]||0),0)*3+(headSlot?(isHead(id)?0:60):(isHead(id)?6:0))+rnd[id];
     if(sc<bs){bs=sc;best=id}}
    if(best){used.add(best);count[best]++;(rooms[best]=rooms[best]||[]).push(room)}else short++;
    return best||'';
   };
   for(const room of p.rooms){const ids=[];for(let k=0;k<p.perRoom;k++)ids.push(pick(room,k===0,ids.filter(Boolean)));g.rooms[room]=ids;
    const real=ids.filter(Boolean);real.forEach((a,i)=>real.slice(i+1).forEach(b=>{const k=[a,b].sort().join();pairs[k]=(pairs[k]||0)+1}))}
-  for(let k=0;k<p.reserves;k++){let best=null,bs=Infinity;for(const id of pool){if(used.has(id))continue;const sc=count[id]*10+rnd[id];if(sc<bs){bs=sc;best=id}}if(best){used.add(best);count[best]+=.5;g.reserve.push(best)}}
+  for(let k=0;k<p.reserves;k++){let best=null,bs=Infinity;for(const id of pool){if(used.has(id)||isAway(id,date))continue;const sc=count[id]*10+rnd[id];if(sc<bs){bs=sc;best=id}}if(best){used.add(best);count[best]+=.5;g.reserve.push(best)}}
   p.grid[date]=g;
  }
  const vals=pool.map(id=>count[id]);
@@ -755,7 +860,12 @@ function planSettings(){
   +'<fieldset class="full"><legend>أيام الامتحانات ('+p.dates.length+')</legend><div class="chips date-chips">'+[...p.dates].sort().map(d=>'<span class="chip">'+dayOfDate(d)+' <span dir="ltr">'+d+'</span><button type="button" class="chip-x" data-drop-date="'+d+'" aria-label="حذف اليوم">×</button></span>').join('')+'</div>'
   +'<div class="date-tools"><label>إضافة يوم<input type="date" id="addDate"></label><button type="button" class="secondary" data-add-date>إضافة</button><span class="muted">أو توليد أيام:</span><label>من<input type="date" id="genFrom"></label><label>عددها<input type="number" id="genCount" min="1" max="40" value="10"></label><div class="chips">'+['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'].map(d=>'<label class="chip"><input type="checkbox" class="genDay" value="'+d+'"'+(['الأحد','الثلاثاء','الخميس'].includes(d)?' checked':'')+'>'+d+'</label>').join('')+'</div><button type="button" class="secondary" data-gen-dates>توليد الأيام</button></div></fieldset>'
   +'<details class="full"><summary>المراقبون المشمولون ('+inc.size+' من '+db.teachers.length+') — ألغِ التحديد عن المعفَين</summary>'+grp(db.teachers.filter(t=>!isExternal(t)),'ملاك القسم')+grp(db.teachers.filter(isExternal),'تدريسيون خارجيون')+'</details>'
-  +'<div class="form-actions full"><button>حفظ الإعدادات</button><button type="button" data-distribute>🎲 توزيع المراقبين تلقائياً</button></div></form>';
+  +'<details class="full"><summary>👑 رؤساء القاعات ('+poolIds().filter(isHead).length+')'+(Array.isArray(p.heads)?'':' — محددون تلقائياً من حملة الدكتوراه')+'</summary><div class="chips">'+db.teachers.filter(t=>inc.has(t.id)).map(t=>'<label class="chip"><input type="checkbox" name="head" value="'+esc(t.id)+'"'+(isHead(t.id)?' checked':'')+'>'+esc(shortName(t.id))+'</label>').join('')+'</div></details>'
+  +'<fieldset class="full"><legend>🚫 مستبعدون من المراقبة في أيام محددة</legend>'
+   +(Object.keys(p.away||{}).filter(id=>(p.away[id]||[]).length).length?'<div class="away-list">'+Object.entries(p.away||{}).filter(([,ds])=>ds.length).map(([id,ds])=>'<div><b>'+esc(shortName(id))+'</b><span>'+[...ds].sort().map(d=>dayOfDate(d)+' <span dir="ltr">'+d.slice(5)+'</span>').join('، ')+'</span><button type="button" class="chip-x" data-away-del="'+esc(id)+'" aria-label="إزالة">×</button></div>').join('')+'</div>':'<p class="muted">لا استثناءات.</p>')
+   +(p.dates.length?'<div class="date-tools"><label>التدريسي<select id="awayWho"><option value="">اختر</option>'+opts()+'</select></label><div class="chips">'+[...p.dates].sort().map(d=>'<label class="chip"><input type="checkbox" class="awayDay" value="'+d+'">'+dayOfDate(d)+' <span dir="ltr">'+d.slice(5)+'</span></label>').join('')+'</div><button type="button" class="secondary" data-away-add>استبعاد في الأيام المحددة</button></div>':'<p class="muted">أضف أيام الامتحانات أولاً.</p>')
+  +'</fieldset>'
+  +'<div class="form-actions full"><button>حفظ الإعدادات</button><button type="button" data-distribute>🧠 إنشاء جدول المراقبات بضغطة زر</button></div></form>';
 }
 function planGrid(){
  const p=plan(),dates=[...p.dates].sort(),cnt=dutyCounts(),admin=isAdmin();
@@ -764,13 +874,13 @@ function planGrid(){
  const rows=dates.map(d=>{const g=p.grid[d]||{rooms:{},reserve:[]};return '<tr><th class="inv-date"><b>'+dayOfDate(d)+'</b><span dir="ltr">'+d+'</span></th>'+p.rooms.map(r=>'<td>'+Array.from({length:p.perRoom},(_,k)=>nm((g.rooms[r]||[])[k]||'',d,r,k)).join('')+'</td>').join('')+'<td class="inv-res">'+Array.from({length:p.reserves},(_,k)=>nm((g.reserve||[])[k]||'',d,'*',k+10)).join('')+'</td></tr>'}).join('');
  const people=poolIds().map(id=>[id,cnt[id]||0]).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...people.map(x=>x[1]));
  return '<div class="scroll"><table class="inv-table"><thead><tr><th>التاريخ</th>'+p.rooms.map(r=>'<th>'+esc(r)+'</th>').join('')+'<th>الاحتياط</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-  +'<p class="muted">الاسم الأول في كل قاعة (بخط عريض) رئيس القاعة.'+(admin?' اضغط أي اسم لتبديله.':'')+'</p>'
+  +'<p class="muted">الاسم الأول في كل قاعة (بخط عريض) رئيس القاعة 👑.'+(admin?' اضغط أي اسم لتبديله.':'')+'</p>'
   +(admin&&Object.keys(p.grid).length?'<details class="inv-stats"><summary>📊 عدد مراقبات كل تدريسي (الاحتياط = نصف)</summary><div class="bars">'+people.map(([id,n])=>'<div><span>'+esc(shortName(id))+'</span><i style="width:'+(n/max*100)+'%"></i><b>'+n+'</b></div>').join('')+'</div></details>':'');
 }
 function swapSlot(key){
  const [date,room,ks]=key.split('|'),k=Number(ks),p=plan(),g=p.grid[date]=p.grid[date]||{rooms:{},reserve:[]},isRes=room==='*',list=isRes?(g.reserve=g.reserve||[]):(g.rooms[room]=g.rooms[room]||[]),idx=isRes?k-10:k,cur=list[idx]||'';
  const busy=new Set([...Object.values(g.rooms).flat(),...(g.reserve||[])].filter(Boolean)),cnt=dutyCounts();
- const opts2=poolIds().map(id=>[id,cnt[id]||0]).sort((a,b)=>a[1]-b[1]).map(([id,n])=>'<option value="'+esc(id)+'"'+(id===cur?' selected':'')+'>'+esc(shortName(id))+' — '+n+(busy.has(id)&&id!==cur?' · مكلّف في هذا اليوم':'')+'</option>').join('');
+ const opts2=poolIds().map(id=>[id,cnt[id]||0]).sort((a,b)=>a[1]-b[1]).map(([id,n])=>'<option value="'+esc(id)+'"'+(id===cur?' selected':'')+'>'+esc(shortName(id))+' — '+n+(busy.has(id)&&id!==cur?' · مكلّف في هذا اليوم':'')+(isAway(id,date)?' · مستبعد في هذا اليوم':'')+(isHead(id)?' 👑':'')+'</option>').join('');
  ttModal('<form method="dialog" class="tt-form"><h3>تبديل مراقب</h3><p class="muted">'+dayOfDate(date)+' <span dir="ltr">'+date+'</span> · '+(isRes?'الاحتياط':'القاعة '+esc(room)+(idx===0?' (رئيس القاعة)':''))+'</p><label>المراقب<select name="who"><option value="">— فارغ —</option>'+opts2+'</select></label><div class="form-actions"><button>حفظ</button><button type="button" class="secondary" data-close>إلغاء</button></div></form>',dlg=>{
   dlg.querySelector('form').onsubmit=e=>{e.preventDefault();const v=e.target.who.value;
    if(v&&v!==cur&&busy.has(v)){for(const ids of Object.values(g.rooms)){const j=ids.indexOf(v);if(j>=0)ids[j]=cur}const j=(g.reserve||[]).indexOf(v);if(j>=0)g.reserve[j]=cur}
@@ -793,7 +903,7 @@ function invigilationView(){
  const admin=isAdmin(),mine=person?dutiesOf(person).filter(x=>x.date>=today()):[];
  return (!admin&&person?section('🛡️ مراقباتي',mine.length?'<div class="duty-list">'+mine.map(x=>'<div class="duty'+(x.reserve?' res':'')+'"><b>'+dayOfDate(x.date)+'</b><span dir="ltr">'+esc(x.date)+'</span><span>'+(x.reserve?'احتياط':'القاعة '+esc(x.room||'—'))+(x.head?' · رئيس القاعة':'')+'</span><small>'+daysUntil(x.date)+'</small></div>').join('')+'</div>':'<p class="empty">لا مراقبات قادمة لك</p>'):'')
   +section('🗓️ '+esc(plan().title),(admin?'<details class="plan-settings"'+(plan().dates.length?'':' open')+'><summary>⚙️ إعدادات الجدول: الأيام والقاعات والمراقبون</summary>'+planSettings()+'</details>':'')
-   +'<div class="tools">'+(admin&&plan().dates.length?'<button data-distribute>🎲 إعادة التوزيع</button>':'')+'<button class="secondary" data-export-plan>📤 تصدير Excel بشكل الفورمة</button><button class="secondary" data-action="print">طباعة</button></div>'+planGrid())
+   +'<div class="tools">'+(admin&&plan().dates.length?'<button data-distribute>🧠 إنشاء / إعادة إنشاء الجدول</button>':'')+'<button class="secondary" data-export-plan>📤 تصدير Excel بشكل الفورمة</button><button class="secondary" data-action="print">طباعة</button></div>'+planGrid())
   +(admin?'<details class="section-like"><summary>مراقبات فردية أخرى ('+db.invigilation.length+')</summary>'+section(formTitle('invigilation','إضافة مراقبة فردية','تعديل مراقبة'),form('invigilation',teacherField()+field('date','التاريخ','date')+field('exam','الامتحان','text',false)+field('start','البداية','time',false)+field('end','النهاية','time',false)+field('room','القاعة','text',false),'إضافة المراقبة'))
    +section('المراقبات الفردية',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),nameTag(x.teacher),esc(x.date),x.start||x.end?'<span dir="ltr">'+esc(x.start||'?')+' – '+esc(x.end||'?')+'</span>':'—',esc(x.room||'—'),actions('invigilation',x.id)])))+'</details>':'');
 }
@@ -894,14 +1004,30 @@ document.querySelectorAll('[data-study]').forEach(b=>b.onclick=()=>{schedStudy=b
 const pf=$('#planForm');if(pf){
  pf.onsubmit=e=>{e.preventDefault();const p=plan(),d=new FormData(pf),inc=new Set(d.getAll('pool'));
   p.title=String(d.get('title')).trim()||'جدول المراقبات الامتحانية';p.rooms=splitList(d.get('rooms'));p.perRoom=Math.min(6,Math.max(1,Number(d.get('perRoom'))||3));p.reserves=Math.min(10,Math.max(0,Number(d.get('reserves'))||0));
-  p.exclude=db.teachers.filter(t=>!inc.has(t.id)).map(t=>t.id);commit('حُفظت إعدادات جدول المراقبات')};
+  p.exclude=db.teachers.filter(t=>!inc.has(t.id)).map(t=>t.id);
+  if(pf.querySelector('[name=head]')){const hs=d.getAll('head');const auto=poolIds().filter(isSenior);p.heads=hs.length===auto.length&&hs.every(x=>auto.includes(x))&&!Array.isArray(p.heads)?null:hs}
+  commit('حُفظت إعدادات جدول المراقبات')};
+ const aa=pf.querySelector('[data-away-add]');if(aa)aa.onclick=()=>{const who=$('#awayWho').value,ds=[...pf.querySelectorAll('.awayDay:checked')].map(x=>x.value);if(!who||!ds.length)return toast('اختر التدريسي والأيام');const p=plan();p.away=p.away||{};p.away[who]=[...new Set([...(p.away[who]||[]),...ds])];
+  for(const dt of ds){const g=p.grid[dt];if(!g)continue;for(const ids of Object.values(g.rooms)){const j=ids.indexOf(who);if(j>=0)ids[j]=''}const j=(g.reserve||[]).indexOf(who);if(j>=0)g.reserve[j]=''}
+  commit('استُبعد '+shortName(who)+' من '+ds.length+' يوم'+(Object.keys(p.grid).length?'؛ أعد التوزيع لملء خاناته':''))};
  pf.querySelector('[data-add-date]').onclick=()=>{const v=$('#addDate').value;if(!v)return toast('اختر التاريخ');const p=plan();if(!p.dates.includes(v))p.dates.push(v);commit('أُضيف '+dayOfDate(v)+' '+v)};
  pf.querySelector('[data-gen-dates]').onclick=()=>{const from=$('#genFrom').value,n=Number($('#genCount').value)||0,days=[...pf.querySelectorAll('.genDay:checked')].map(x=>x.value);if(!from||!n||!days.length)return toast('حدّد تاريخ البداية وعدد الأيام وأيام الأسبوع');const p=plan(),d=new Date(from+'T00:00');let added=0,guard=0;while(added<n&&guard++<400){const iso=d.toLocaleDateString('en-CA');if(days.includes(dayOfDate(iso))&&!p.dates.includes(iso)){p.dates.push(iso);added++}d.setDate(d.getDate()+1)}commit('أُضيف '+added+' يوم امتحان')};
 }
+document.querySelectorAll('[data-away-del]').forEach(b=>b.onclick=()=>{delete plan().away[b.dataset.awayDel];commit('أُلغي الاستثناء')});
 document.querySelectorAll('[data-drop-date]').forEach(b=>b.onclick=()=>{const p=plan(),v=b.dataset.dropDate;p.dates=p.dates.filter(x=>x!==v);delete p.grid[v];commit('حُذف اليوم '+v)});
-document.querySelectorAll('[data-distribute]').forEach(b=>b.onclick=()=>{if(Object.keys(plan().grid).length&&!confirm('إعادة التوزيع تستبدل التوزيع الحالي بالكامل. متابعة؟'))return;distribute()});
+document.querySelectorAll('[data-distribute]').forEach(b=>b.onclick=()=>{if(Object.keys(plan().grid).length&&!confirm('إعادة الإنشاء تستبدل التوزيع الحالي بالكامل. متابعة؟'))return;const pf2=$('#planForm');if(pf2){pf2.requestSubmit()}distribute()});
 document.querySelectorAll('[data-slot]').forEach(c=>{c.onclick=()=>swapSlot(c.dataset.slot);c.onkeydown=e=>{if(e.key==='Enter')swapSlot(c.dataset.slot)}});
 document.querySelectorAll('[data-export-plan]').forEach(b=>b.onclick=exportPlan);
+const sf=$('#smartForm');if(sf){
+ const keep=()=>readSmartForm(sf);
+ sf.querySelector('[data-padd]').onclick=()=>{const {P}=keep();P.courses.push({name:'مادة جديدة',hours:2,teachers:{}});commit()};
+ sf.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{const {P}=keep();P.courses.splice(Number(b.dataset.pdel),1);commit()});
+ sf.querySelector('[data-psave]').onclick=()=>{keep();commit('حُفظت خطة التدريس')};
+ sf.querySelector('[data-pfrom]').onclick=()=>{const {st,n}=keep();const k=planFromTimetable(st,n);commit(k?'استُخرجت '+k+' مادة من الجدول الحالي مع تدريسييها وقاعاتها':'لا يوجد جدول حالي لهذه المرحلة')};
+ sf.querySelector('[data-pcurr]').onclick=()=>{const i=$('#currFile');i.value='';i.onchange=()=>{const {st,n}=keep();const term=confirm('اضغط «موافق» لمواد الكورس الأول، أو «إلغاء» لمواد الكورس الثاني')?1:2;importCurriculum(i.files[0],st,n,term)};i.click()};
+ sf.querySelector('[data-pgen]').onclick=()=>{const {st,n}=keep();if(sched().some(x=>studyOf(x)===st&&x.stage===n)&&!confirm('سيُستبدل جدول '+stageName(n)+' الحالي بجدول جديد. متابعة؟'))return;runGenerate([[st,n]])};
+ sf.querySelector('[data-pgenall]').onclick=()=>{const {st}=keep();const list=[1,2,3,4].filter(k=>(db.ttPlans?.[st+k]?.courses||[]).length).map(k=>[st,k]);if(!list.length)return toast('لا توجد خطط تدريس محفوظة');if(!confirm('سيُعاد إنشاء جداول '+list.map(([,k])=>stageName(k)).join('، ')+' للدراسة '+studyName(st)+'. متابعة؟'))return;runGenerate(list)};
+}
 document.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>{schedStage=Number(b.dataset.stage);render()});
 document.querySelectorAll('[data-cell]').forEach(c=>{c.onclick=()=>editCell(c.dataset.cell);c.onkeydown=e=>{if(e.key==='Enter')editCell(c.dataset.cell)}});
 document.querySelectorAll('[data-tt-blank]').forEach(b=>b.onclick=()=>{db.ttSections=db.ttSections||{};db.ttSections[schedStudy+schedStage]=['A','B','C','D'];commit('أُنشئ جدول فارغ بأربع شعب؛ اضغط أي خانة لإضافة حصة')});
@@ -1194,7 +1320,7 @@ function cloudView(){
  if(cloud.admin)m.workloads=new Map((db.workloads||[]).map(r=>[r.id,r]));
  m.reads=new Map(db.announcements.flatMap(a=>(a.read||[]).map(t=>[a.id+'_'+t,{id:a.id+'_'+t,ann:a.id,teacher:t}])));
  m.answers=new Map(db.polls.flatMap(p=>(p.answers||[]).map(x=>[p.id+'_'+x.teacher,{id:p.id+'_'+x.teacher,poll:p.id,teacher:x.teacher,answer:x.answer}])));
- m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
+ m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
  return m;
 }
 let pushQueued=false;
@@ -1224,7 +1350,7 @@ function applyRemote(force){
  for(const c of CORE)next[c]=g(c).map(r=>({...r}));
  next.announcements.forEach(a=>a.read=reads.filter(r=>r.ann===a.id).map(r=>r.teacher));
  next.polls.forEach(p=>p.answers=answers.filter(r=>r.poll===p.id).map(r=>({teacher:r.teacher,answer:r.answer})));
- next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.scheduleStale=!!meta.scheduleStale;
+ next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.scheduleStale=!!meta.scheduleStale;
  next.workloadMeta=meta.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};
  next.workloads=g('workloads');
  db=next;updateIdentity();
