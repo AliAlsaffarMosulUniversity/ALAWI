@@ -266,6 +266,16 @@ tr.day-start td,tr.day-start th{border-top:3px solid var(--line-2)}
 .smart-table input,.smart-table select{width:100%;min-width:90px;padding:6px}
 .smart-table td:nth-child(2) input{width:70px;min-width:0}
 .away-list{display:grid;gap:4px;margin-bottom:8px}.away-list>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.curr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:12px}
+.curr-card{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface-2)}
+.curr-card h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:15px}
+.curr-card h3 small{margin-inline-start:auto;color:var(--muted);font-weight:400;font-size:12px}
+.curr-card ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.curr-card li{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 10px;border-radius:9px;background:hsl(var(--h) 70% 95%);box-shadow:inset 3px 0 0 hsl(var(--h) 60% 55%);font-size:13px}
+.curr-card li small{color:var(--muted);font-size:11px}
+.curr-card li b{font-size:12px;color:hsl(var(--h) 50% 30%)}
+:root[data-theme="dark"] .curr-card li{background:hsl(var(--h) 25% 20%)}:root[data-theme="dark"] .curr-card li b{color:hsl(var(--h) 60% 80%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .curr-card li{background:hsl(var(--h) 25% 20%)}:root:not([data-theme="light"]) .curr-card li b{color:hsl(var(--h) 60% 80%)}}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -587,9 +597,12 @@ function coursesView(){
  if(!isAdmin()&&person&&scheduleFilter==='t:'+person)return section('🗓️ جدولي الأسبوعي',myWeek(person))+section('جدول القسم','<div class="tools"><label>عرض<select id="scheduleFilter"><option value="t:'+esc(person)+'">جدولي فقط</option><option value="">كل جدول القسم</option></select></label><button class="secondary" data-action="print">طباعة / PDF</button></div><p class="muted">اختر «كل جدول القسم» لرؤية حصص الزملاء، وتبقى حصصك ملوّنة.</p>');
  const rooms=[...new Map(db.schedule.map(s=>[roomKey(s.room),s.room])).entries()],tids=[...new Set(db.schedule.map(s=>s.teacher))];
  const shown=db.schedule.filter(s=>!scheduleFilter||(scheduleFilter.startsWith('t:')?s.teacher===scheduleFilter.slice(2):roomKey(s.room)===scheduleFilter.slice(2)));
- return timetableSection()+section(formTitle('course','المواد الدراسية','تعديل مادة'),(isAdmin()?form('course',field('title','اسم المادة')+'<label>الدراسة<select name="study"><option value="morning">الصباحية</option><option value="evening">المسائية</option></select></label><label>المرحلة<select name="stage" required><option value="">اختر المرحلة</option>'+STAGES.map((x,i)=>'<option value="'+(i+1)+'">'+x+'</option>').join('')+'</select></label>'+'<label>الشعبة<select name="section">'+'ABCDEF'.split('').map(x=>'<option>'+x+'</option>').join('')+'</select></label>'+teacherField('teacher','التدريسي',false)+field('sessions','عدد المحاضرات الأسبوعية (ساعتان لكل منها)','number',false)+field('room','القاعة','text',false),'إضافة المادة')+'<div class="tools"><button class="secondary" data-action="generate">توليد محاضرات هذه المواد تلقائياً</button></div><p class="muted">التوليد اختياري: يضع كل مادة في محاضرات من ساعتين دون المساس بالحصص المستوردة.</p>':'')
-  +table(['المادة','الدراسة','المرحلة','الشعبة','التدريسي','الحصص','القاعة',''],db.courses.slice().sort((a,b)=>studyOf(a).localeCompare(studyOf(b))*-1||(a.stage||9)-(b.stage||9)).map(c=>[esc(c.title),studyName(studyOf(c)),c.stage?STAGES[c.stage-1]:pill('warn','حدّد المرحلة'),esc(c.section||'A'),esc(name(c.teacher))+(!c.teacher||teacherDays(db.teachers.find(t=>t.id===c.teacher)).length?'':' '+pill('warn','بلا أيام تواجد')),esc(c.sessions),esc(c.room),actions('course',c.id)])))
- +'';
+ return timetableSection()+curriculumSection();
+}
+function curriculumSection(){
+ const t=ttTerm();
+ return section('📚 منهاج القسم — المواد والساعات الأسبوعية','<div class="tools"><div class="study-tabs" role="tablist">'+[1,2].map(k=>'<button role="tab" aria-selected="'+(k===t)+'" class="'+(k===t?'active':'')+'"'+(isAdmin()?' data-term="'+k+'"':' disabled')+'>'+(k===1?'الكورس الأول':'الكورس الثاني')+'</button>').join('')+'</div><span class="muted">'+(isAdmin()?'الكورس المختار تُملأ منه خطط التدريس في «الجدول الذكي».':'')+'</span></div>'
+  +'<div class="curr-grid">'+[1,2,3,4].map(n=>{const list=curriculumOf(n,t),sum=list.reduce((a,c)=>a+c.hours,0);return '<div class="curr-card"><h3><span class="stage-no">'+n+'</span>'+stageName(n)+'<small>'+list.length+' مواد · '+sum+' ساعة</small></h3><ul>'+list.map(c=>'<li style="--h:'+hueOf(c.name)+'"><span>'+esc(c.name)+'</span><small dir="ltr">'+esc(c.code)+'</small><b>'+c.hours+' س</b></li>').join('')+'</ul></div>'}).join('')+'</div>');
 }
 function timetableSection(){
  return section('الجداول الدراسية','<p class="muted">جدول لكل دراسة ومرحلة، وعمود لكل شعبة، وفترات بساعة واحدة. استورد جداول القسم من ملف Excel كما هي، أو أضف الحصص وعدّلها بالضغط على أي خانة.</p>'
@@ -615,7 +628,12 @@ function scheduleBoard(){
 }
 // ---------------------------------------------------------------- الجدول الذكي: خطة تدريس المرحلة ثم إنشاء الجدول بضغطة زر
 // الخطة لكل دراسة ومرحلة: قاعة كل شعبة، أيام الدوام، والمواد بساعاتها الأسبوعية وتدريسي كل شعبة
-const ttPlan=(st,n)=>{db.ttPlans=db.ttPlans||{};return db.ttPlans[st+n]||(db.ttPlans[st+n]={rooms:{},days:[...DAYS],courses:[]})};
+// منهاج قسم إدارة الأعمال (من ملف «منهاج ادارة الاعمال لاربع مراحل»): [المرحلة، الكورس، الرمز، المادة، الساعات الأسبوعية]
+const CURRICULUM=[[1,1,'BA1101','أساسيات إدارة الأعمال',5],[1,1,'BA1102','مبادئ الاقتصاد',4],[1,1,'BA1103','أساسيات المحاسبة',4],[1,1,'BA1104','الرياضيات للإدارة',4],[1,1,'UNI115','اللغة الإنكليزية',2],[1,1,'UNI116','اللغة العربية',2],[1,2,'BA1201','مبادئ إدارة الأعمال',5],[1,2,'BA1202','مبادئ الإحصاء',4],[1,2,'BA1203','مبادئ المحاسبة',4],[1,2,'BA1204','قراءات إنكليزية في الأعمال',3],[1,2,'UNI','الحاسوب',3],[1,2,'UNI','الديمقراطية وحقوق الإنسان',2],[2,1,'BA2101','إدارة التسويق',4],[2,1,'BA2102','نظرية المنظمة',4],[2,1,'BA2103','إدارة الموارد البشرية',3],[2,1,'BA2104','المحاسبة المتوسطة',3],[2,1,'BA2105','القانون التجاري',3],[2,1,'UNI','تطبيقات إدارية متقدمة باستخدام الحاسوب',3],[2,1,'UNI','جرائم حزب البعث',2],[2,2,'BA2201','التسويق الرقمي',4],[2,2,'BA2202','إدارة الموارد البشرية المعاصرة',3],[2,2,'BA2203','السلوك التنظيمي',4],[2,2,'BA2204','بحوث العمليات باستخدام QSB',3],[2,2,'BA2205','إدارة اللوجستيات',3],[2,2,'UNI','اللغة العربية',2],[2,2,'UNI','اللغة الإنكليزية',2],[3,1,'BA3101','أساسيات الإدارة المالية',4],[3,1,'BA3102','التخطيط الاستراتيجي',4],[3,1,'BA3103','إدارة المصارف',4],[3,1,'BA3104','إدارة المشاريع',4],[3,1,'BA3105','إدارة الأعمال الرقمية',3],[3,1,'BA3106','الأساليب الكمية وتطبيقات SPSS',4],[3,2,'BA3201','الإدارة المالية المتقدمة',4],[3,2,'BA3202','الإدارة الاستراتيجية',4],[3,2,'BA3203','مهارات القيادة',4],[3,2,'BA3204','إدارة الأزمات',3],[3,2,'BA3205','محاسبة التكاليف',4],[3,2,'BA3206','مناهج وأخلاقيات البحث العلمي',2],[4,1,'BA4101','إدارة الإنتاج',4],[4,1,'BA4102','إدارة المحفظة الاستثمارية',4],[4,1,'BA4103','إدارة الخطر والتأمين',4],[4,1,'BA4104','ريادة الأعمال',4],[4,1,'BA4105','استدامة الشركات',3],[4,1,'BA4106','أخلاقيات الأعمال والمسؤولية الاجتماعية',3],[4,2,'BA4201','إدارة العمليات',5],[4,2,'BA4202','إدارة الجودة',4],[4,2,'BA4203','إدارة المعرفة',4],[4,2,'BA4204','إدارة التفاوض',4],[4,2,'BA4205','المحاسبة الإدارية',4]];
+const ttTerm=()=>db.ttTerm===2?2:1;
+const curriculumOf=(n,term=ttTerm())=>CURRICULUM.filter(c=>c[0]===n&&c[1]===term).map(([,,code,name,hours])=>({code,name,hours}));
+// خطة المرحلة تبدأ من الجدول الحالي إن وُجد، وإلا من مواد المنهاج للكورس الحالي
+const ttPlan=(st,n)=>{db.ttPlans=db.ttPlans||{};if(!db.ttPlans[st+n]){db.ttPlans[st+n]={rooms:{},days:[...DAYS],courses:[]};if(!planFromTimetable(st,n))db.ttPlans[st+n].courses=curriculumOf(n).map(c=>({name:c.name,hours:c.hours,teachers:{}}))}return db.ttPlans[st+n]};
 const planSecs=(st,n)=>{const s=stageSections(st,n);return s.length?s:['A','B','C','D']};
 function planFromTimetable(st,n){
  const P=ttPlan(st,n),its=sched().filter(x=>studyOf(x)===st&&x.stage===n&&x.kind!=='محاضرة إرشادية'),map=new Map();
@@ -634,7 +652,7 @@ function smartPanel(st,n){
   +'<div class="scroll"><table class="smart-table"><thead><tr><th>المادة</th><th>ساعات/أسبوع</th>'+secs.map(sec=>'<th>تدريسي الشعبة '+sec+'</th>').join('')+'<th></th></tr></thead><tbody>'
   +P.courses.map((c,i)=>'<tr><td><input data-pn="'+i+'" value="'+esc(c.name)+'"></td><td><input data-ph="'+i+'" type="number" min="1" max="12" value="'+esc(c.hours)+'"></td>'+secs.map(sec=>'<td>'+sel(sec,c.teachers?.[sec]||'',i)+'</td>').join('')+'<td><button type="button" class="chip-x" data-pdel="'+i+'" aria-label="حذف المادة">×</button></td></tr>').join('')
   +'</tbody></table></div>'
-  +'<div class="tools"><button type="button" class="secondary" data-padd>+ مادة</button><button type="button" class="secondary" data-pfrom>استخراج الخطة من الجدول الحالي</button><button type="button" class="secondary" data-pcurr>استيراد المواد من ملف المنهاج</button><input type="file" id="currFile" accept=".xlsx,.xls" hidden><button type="button" class="secondary" data-psave>حفظ الخطة</button></div>'
+  +'<div class="tools"><button type="button" class="secondary" data-padd>+ مادة</button><button type="button" class="secondary" data-pfrom>استخراج الخطة من الجدول الحالي</button><button type="button" class="secondary" data-pcurr>تحميل مواد المنهاج ('+(ttTerm()===1?'الكورس الأول':'الكورس الثاني')+')</button><button type="button" class="secondary" data-psave>حفظ الخطة</button></div>'
   +'<div class="form-actions"><button type="button" data-pgen>🧠 إنشاء جدول '+stageName(n)+' بضغطة زر</button><button type="button" class="secondary" data-pgenall>إنشاء جداول كل مراحل الدراسة '+studyName(st)+'</button></div></form></details>';
 }
 function readSmartForm(f){
@@ -1024,10 +1042,11 @@ const sf=$('#smartForm');if(sf){
  sf.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{const {P}=keep();P.courses.splice(Number(b.dataset.pdel),1);commit()});
  sf.querySelector('[data-psave]').onclick=()=>{keep();commit('حُفظت خطة التدريس')};
  sf.querySelector('[data-pfrom]').onclick=()=>{const {st,n}=keep();const k=planFromTimetable(st,n);commit(k?'استُخرجت '+k+' مادة من الجدول الحالي مع تدريسييها وقاعاتها':'لا يوجد جدول حالي لهذه المرحلة')};
- sf.querySelector('[data-pcurr]').onclick=()=>{const i=$('#currFile');i.value='';i.onchange=()=>{const {st,n}=keep();const term=confirm('اضغط «موافق» لمواد الكورس الأول، أو «إلغاء» لمواد الكورس الثاني')?1:2;importCurriculum(i.files[0],st,n,term)};i.click()};
+ sf.querySelector('[data-pcurr]').onclick=()=>{const {st,n,P}=keep();const have=new Set(P.courses.map(c=>hk(c.name)));const add=curriculumOf(n).filter(c=>!have.has(hk(c.name)));add.forEach(c=>P.courses.push({name:c.name,hours:c.hours,teachers:{}}));commit(add.length?'أُضيفت '+add.length+' مادة من المنهاج؛ حدّد تدريسي كل شعبة ثم أنشئ الجدول':'كل مواد المنهاج موجودة في الخطة')};
  sf.querySelector('[data-pgen]').onclick=()=>{const {st,n}=keep();if(sched().some(x=>studyOf(x)===st&&x.stage===n)&&!confirm('سيُستبدل جدول '+stageName(n)+' الحالي بجدول جديد. متابعة؟'))return;runGenerate([[st,n]])};
  sf.querySelector('[data-pgenall]').onclick=()=>{const {st}=keep();const list=[1,2,3,4].filter(k=>(db.ttPlans?.[st+k]?.courses||[]).length).map(k=>[st,k]);if(!list.length)return toast('لا توجد خطط تدريس محفوظة');if(!confirm('سيُعاد إنشاء جداول '+list.map(([,k])=>stageName(k)).join('، ')+' للدراسة '+studyName(st)+'. متابعة؟'))return;runGenerate(list)};
 }
+document.querySelectorAll('[data-term]').forEach(b=>b.onclick=()=>{db.ttTerm=Number(b.dataset.term);commit('المنهاج المعروض: '+(db.ttTerm===1?'الكورس الأول':'الكورس الثاني'))});
 document.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>{schedStage=Number(b.dataset.stage);render()});
 document.querySelectorAll('[data-cell]').forEach(c=>{c.onclick=()=>editCell(c.dataset.cell);c.onkeydown=e=>{if(e.key==='Enter')editCell(c.dataset.cell)}});
 document.querySelectorAll('[data-tt-blank]').forEach(b=>b.onclick=()=>{db.ttSections=db.ttSections||{};db.ttSections[schedStudy+schedStage]=['A','B','C','D'];commit('أُنشئ جدول فارغ بأربع شعب؛ اضغط أي خانة لإضافة حصة')});
@@ -1320,7 +1339,7 @@ function cloudView(){
  if(cloud.admin)m.workloads=new Map((db.workloads||[]).map(r=>[r.id,r]));
  m.reads=new Map(db.announcements.flatMap(a=>(a.read||[]).map(t=>[a.id+'_'+t,{id:a.id+'_'+t,ann:a.id,teacher:t}])));
  m.answers=new Map(db.polls.flatMap(p=>(p.answers||[]).map(x=>[p.id+'_'+x.teacher,{id:p.id+'_'+x.teacher,poll:p.id,teacher:x.teacher,answer:x.answer}])));
- m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
+ m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},ttTerm:db.ttTerm||1,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
  return m;
 }
 let pushQueued=false;
@@ -1350,7 +1369,7 @@ function applyRemote(force){
  for(const c of CORE)next[c]=g(c).map(r=>({...r}));
  next.announcements.forEach(a=>a.read=reads.filter(r=>r.ann===a.id).map(r=>r.teacher));
  next.polls.forEach(p=>p.answers=answers.filter(r=>r.poll===p.id).map(r=>({teacher:r.teacher,answer:r.answer})));
- next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.scheduleStale=!!meta.scheduleStale;
+ next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.ttTerm=meta.ttTerm||1;next.scheduleStale=!!meta.scheduleStale;
  next.workloadMeta=meta.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};
  next.workloads=g('workloads');
  db=next;updateIdentity();
