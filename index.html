@@ -582,7 +582,7 @@ function teacherDashboard(){
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
- return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (مطلوبة لتوليد الجدول فقط)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
+ return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص (يُستعمل لاقتراح المواد)','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (مطلوبة لتوليد الجدول فقط)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
  +section('دليل التدريسيين','<div class="tools">'+(isAdmin()?'<button data-action="quickImport">📥 استيراد تدريسيي القسم</button><button data-action="quickImportExt">📥 استيراد تدريسيين خارجيين</button><button class="secondary" data-action="teacherTemplate">تنزيل نموذج Excel</button><input id="quickExcel" type="file" accept=".xlsx,.xls" hidden>':'')+'<button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+(isAdmin()?'<p class="muted">الاستيراد يضيف كل صفوف الملف دفعة واحدة. من كان قسمه «إدارة الأعمال» يُضاف إلى ملاك القسم، وغيره يُضاف خارجياً. الأسماء الموجودة مسبقاً تُتجاوز.</p>':'')+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
  +section('التدريسيون الخارجيون ('+db.teachers.filter(isExternal).length+')',(isAdmin()?'<div class="tools"><button class="secondary" data-action="quickImportExt">📥 استيراد قائمة خارجيين من Excel</button></div>':'')+'<p class="muted">يظهرون أسفل تدريسيي القسم في كل قوائم الاختيار (المراقبات، رؤساء القاعات، الجدول الذكي، اللجان)، فيمكن تكليفهم وتوزيعهم كأي تدريسي.</p>'+teacherTable(db.teachers.filter(isExternal),true));
 }
@@ -682,8 +682,41 @@ function planFromTimetable(st,n){
  for(const x of its)if(x.room&&!P.rooms[secOf(x)])P.rooms[secOf(x)]=x.room;
  return P.courses.length;
 }
+// ---------------------------------------------------------------- اقتراح تدريسي كل مادة: من درّسها سابقاً، ثم من يطابق تخصصه حقلها
+const FIELDS=[['محاسبه','محاسب|تكاليف'],['تسويق','تسويق'],['كمي','احصاء|رياضيات|كمي|spss|بحوث العمليات|qsb'],['حاسوب','حاسوب|حاسبات|تكنولوجيا|تكنلوجيا|معلومات|رقمي|الكتروني'],['قانون','قانون|عقود'],['انكليزي','انكليز|english'],['عربي','عربي'],['اقتصاد','اقتصاد'],['بشريه','موارد بشري|سلوك|تنظيم|منظم|قياده|معرف'],['ماليه','مالي|مصارف|مصرف|محفظ|استثمار|خطر|تامين|تمويل'],['استراتيجيه','استراتيج|تخطيط|ريادي|رياده|ازمات|تفاوض|استدام|اخلاقيات'],['عمليات','انتاج|عمليات|جوده|لوجست|مشاريع'],['اداره','اداره|اعمال|منظم']];
+const fieldsOf=t=>{const h=hk(t);return new Set(FIELDS.filter(([,re])=>new RegExp(re).test(h)).map(([k])=>k))};
+function suggestTeachers(course,st,n){
+ const key=hk(course),cf=fieldsOf(course),out=new Map(),add=(id,sc,why)=>{if(!id)return;const o=out.get(id)||{id,score:0,why:new Set()};o.score+=sc;o.why.add(why);out.set(id,o)};
+ if(!key)return [];
+ sched().forEach(x=>{if(x.teacher&&hk(x.course)===key)add(x.teacher,x.stage===n&&studyOf(x)===st?3:2,'درّسها سابقاً')});
+ Object.values(db.ttPlans||{}).forEach(P=>(P.courses||[]).forEach(c=>{if(hk(c.name)===key)Object.values(c.teachers||{}).forEach(t=>add(t,2,'درّسها سابقاً'))}));
+ const generic=cf.size===1&&cf.has('اداره'),useful=f=>f!=='اداره'||generic;
+ // من درّس مواد في الحقل نفسه (مثل المحاسبة المتوسطة لمادة أساسيات المحاسبة) مقترح أيضاً
+ const taught={};sched().forEach(x=>{if(x.teacher&&x.kind!=='محاضرة إرشادية')fieldsOf(x.course).forEach(f=>{(taught[x.teacher]=taught[x.teacher]||new Set()).add(f)})});
+ Object.entries(taught).forEach(([id,fs])=>{const hit=[...cf].filter(f=>fs.has(f)&&useful(f));if(hit.length)add(id,hit.length*3,'درّس مواد مشابهة')});
+ db.teachers.forEach(t=>{if(!t.specialty)return;const tf=fieldsOf(t.specialty),hit=[...cf].filter(f=>tf.has(f)&&useful(f));if(hit.length)add(t.id,hit.length*4,'التخصص: '+t.specialty)});
+ // من درّسها سابقاً يُعطى وزناً أكبر من تكرار حصصه
+ return [...out.values()].map(o=>({...o,score:o.why.has('درّسها سابقاً')?o.score+20:o.score})).sort((a,b)=>b.score-a.score);
+}
+function teacherSelect(attrs,course,st,n,value,emptyLabel='—'){
+ const sug=suggestTeachers(course,st,n).slice(0,8),ids=new Set(sug.map(x=>x.id)),rest=db.teachers.filter(t=>!ids.has(t.id)),grp=(label,list)=>list.length?'<optgroup label="'+label+'">'+optList(list)+'</optgroup>':'';
+ const html='<option value="">'+emptyLabel+'</option>'+(sug.length?'<optgroup label="⭐ مقترحون لهذه المادة">'+sug.map(x=>'<option value="'+esc(x.id)+'">⭐ '+esc(name(x.id))+' — '+esc([...x.why][0])+'</option>').join('')+'</optgroup>':'')+grp('ملاك القسم',rest.filter(t=>!isExternal(t)))+grp('تدريسيون خارجيون',rest.filter(isExternal));
+ return '<select '+attrs+'>'+(value?html.replace('value="'+esc(value)+'"','value="'+esc(value)+'" selected'):html)+'</select>';
+}
+// اقتراح تلقائي: يملأ الخانات الفارغة بأفضل مقترح مع موازنة ساعات التدريسيين
+function autoAssign(st,n){
+ const P=ttPlan(st,n),secs=planSecs(st,n),load={};
+ Object.values(db.ttPlans||{}).forEach(Q=>(Q.courses||[]).forEach(c=>Object.values(c.teachers||{}).forEach(t=>{if(t)load[t]=(load[t]||0)+(Number(c.hours)||0)})));
+ let filled=0,left=0;
+ P.courses.forEach(c=>{const sug=suggestTeachers(c.name,st,n);c.teachers=c.teachers||{};
+  secs.forEach(sec=>{if(c.teachers[sec])return;
+   const same=id=>secs.filter(s2=>c.teachers[s2]===id).length;
+   const best=sug.map(x=>({...x,v:x.score*10-(load[x.id]||0)*3-same(x.id)*40})).sort((a,b)=>b.v-a.v)[0];
+   if(best){c.teachers[sec]=best.id;load[best.id]=(load[best.id]||0)+(Number(c.hours)||0);filled++}else left++})});
+ return {filled,left};
+}
 function smartPanel(st,n){
- const P=ttPlan(st,n),secs=planSecs(st,n),sel=(sec,v,i)=>'<select data-pt="'+i+'|'+sec+'"><option value="">—</option>'+opts().replace('value="'+esc(v)+'"','value="'+esc(v)+'" selected')+'</select>';
+ const P=ttPlan(st,n),secs=planSecs(st,n),sel=(sec,v,i)=>teacherSelect('data-pt="'+i+'|'+sec+'"',P.courses[i]?.name||'',st,n,v);
  const total=P.courses.reduce((a,c)=>a+(Number(c.hours)||0),0);
  return '<details class="smart-panel"'+(P.courses.length?'':' open')+'><summary>🧠 الجدول الذكي — خطة تدريس '+stageName(n)+' ('+P.courses.length+' مادة · '+total+' ساعة لكل شعبة)</summary>'
   +'<form id="smartForm" data-st="'+st+'" data-n="'+n+'"><p class="muted">حدّد المواد وساعاتها الأسبوعية وتدريسي كل شعبة وقاعتها، ثم اضغط «إنشاء الجدول». يضع النظام المحاضرات بساعتين متتاليتين، ويمنع تعارض التدريسي والقاعة مع كل المراحل والدراستين، ويوزّع ساعات كل شعبة على أيام الأسبوع.</p>'
@@ -692,7 +725,7 @@ function smartPanel(st,n){
   +'<div class="scroll"><table class="smart-table"><thead><tr><th>المادة</th><th>ساعات/أسبوع</th>'+secs.map(sec=>'<th>تدريسي الشعبة '+sec+'</th>').join('')+'<th></th></tr></thead><tbody>'
   +P.courses.map((c,i)=>'<tr><td><input data-pn="'+i+'" value="'+esc(c.name)+'"></td><td><input data-ph="'+i+'" type="number" min="1" max="12" value="'+esc(c.hours)+'"></td>'+secs.map(sec=>'<td>'+sel(sec,c.teachers?.[sec]||'',i)+'</td>').join('')+'<td><button type="button" class="chip-x" data-pdel="'+i+'" aria-label="حذف المادة">×</button></td></tr>').join('')
   +'</tbody></table></div>'
-  +'<div class="tools"><button type="button" class="secondary" data-padd>+ مادة</button><button type="button" class="secondary" data-pfrom>استخراج الخطة من الجدول الحالي</button><button type="button" class="secondary" data-pcurr>تحميل مواد المنهاج ('+(ttTerm()===1?'الكورس الأول':'الكورس الثاني')+')</button><button type="button" class="secondary" data-psave>حفظ الخطة</button></div>'
+  +'<div class="tools"><button type="button" data-pauto>✨ اقتراح التدريسيين حسب التخصص</button><button type="button" class="secondary" data-padd>+ مادة</button><button type="button" class="secondary" data-pfrom>استخراج الخطة من الجدول الحالي</button><button type="button" class="secondary" data-pcurr>تحميل مواد المنهاج ('+(ttTerm()===1?'الكورس الأول':'الكورس الثاني')+')</button><button type="button" class="secondary" data-psave>حفظ الخطة</button></div>'
   +'<div class="form-actions"><button type="button" data-pgen>🧠 إنشاء جدول '+stageName(n)+' بضغطة زر</button><button type="button" class="secondary" data-pgenall>إنشاء جداول كل مراحل الدراسة '+studyName(st)+'</button></div></form></details>';
 }
 function readSmartForm(f){
@@ -793,11 +826,12 @@ function editCell(key){
  ttModal('<form method="dialog" class="tt-form"><h3>'+(block.length?'تعديل حصة':'إضافة حصة')+'</h3><p class="muted">'+stageName(n)+' · '+studyName(st)+' · الشعبة '+sec+' · '+d+' <span dir="ltr">'+slots[pi].split('–')[0].trim()+'</span></p>'
   +'<label>المادة<input name="course" list="ttCourses" required value="'+esc(x.course||'')+'"><datalist id="ttCourses">'+courseNames.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist></label>'
   +'<label>نوع الحصة<select name="kind">'+KINDS.map(k=>'<option'+((x.kind||'نظري')===k?' selected':'')+'>'+k+'</option>').join('')+'</select></label>'
-  +'<label>التدريسي<select name="teacher"><option value="">'+(x.tname&&!x.teacher?'كما في الجدول: '+esc(x.tname):'غير محدد')+'</option>'+opts()+'</select></label>'
+  +'<label>التدريسي'+teacherSelect('name="teacher"',x.course||'',st,n,x.teacher||'',x.tname&&!x.teacher?'كما في الجدول: '+esc(x.tname):'غير محدد')+'</label>'
   +'<label>القاعة<input name="room" value="'+esc(x.room||'')+'"></label>'
   +'<label>المدة<select name="dur">'+[1,2,3].filter(k=>pi+k<=slots.length).map(k=>'<option value="'+k+'"'+(k===(block.length?span:Math.min(2,slots.length-pi))?' selected':'')+'>'+(k===1?'ساعة':k===2?'ساعتان':'3 ساعات')+'</option>').join('')+'</select></label>'
   +'<div class="form-actions"><button value="save">حفظ</button>'+(block.length?'<button type="button" class="ghost-danger" data-tt-del>حذف الحصة</button>':'')+'<button type="button" class="secondary" data-close>إلغاء</button></div></form>',dlg=>{
   const f=dlg.querySelector('form');if(x.teacher)f.teacher.value=x.teacher;
+  f.course.addEventListener('change',()=>{const v=f.teacher.value,tmp=document.createElement('div');tmp.innerHTML=teacherSelect('name="teacher"',f.course.value,st,n,v,x.tname&&!x.teacher?'كما في الجدول: '+esc(x.tname):'غير محدد');f.teacher.innerHTML=tmp.firstChild.innerHTML;f.teacher.value=v});
   const drop=()=>{const ids=new Set(block.map(y=>y.id));db.schedule=db.schedule.filter(y=>!ids.has(y.id))};
   dlg.querySelector('[data-tt-del]')?.addEventListener('click',()=>{drop();dlg.close();commit('حُذفت الحصة')});
   f.onsubmit=e=>{e.preventDefault();const dur=Number(f.dur.value),course=f.course.value.trim();if(!course)return;
@@ -1169,6 +1203,7 @@ document.querySelectorAll('[data-slot]').forEach(c=>{c.onclick=()=>swapSlot(c.da
 document.querySelectorAll('[data-export-plan]').forEach(b=>b.onclick=exportPlan);
 const sf=$('#smartForm');if(sf){
  const keep=()=>readSmartForm(sf);
+ sf.querySelector('[data-pauto]').onclick=()=>{const {st,n}=keep();const r=autoAssign(st,n);commit(r.filled?'✨ اقتُرح '+r.filled+' تدريسياً'+(r.left?'، وبقيت '+r.left+' خانة بلا مقترح (أكمل التخصص في صفحة التدريسيون أو اختر يدوياً)':''):'لا مقترحات: أضف «التخصص» للتدريسيين أو استورد جداول سابقة')};
  sf.querySelector('[data-padd]').onclick=()=>{const {P}=keep();P.courses.push({name:'مادة جديدة',hours:2,teachers:{}});commit()};
  sf.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{const {P}=keep();P.courses.splice(Number(b.dataset.pdel),1);commit()});
  sf.querySelector('[data-psave]').onclick=()=>{keep();commit('حُفظت خطة التدريس')};
