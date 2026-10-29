@@ -292,6 +292,23 @@ tr.day-start td,tr.day-start th{border-top:3px solid var(--line-2)}
 .room-tile:has(input:focus-visible){outline:3px solid #e5b94f}
 .bulk-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
 .bulk-bar span{font-size:12px;color:var(--muted);margin-inline-start:4px}
+.cal-wrap{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+.cal{border:1px solid var(--line);border-radius:14px;padding:10px;background:var(--surface)}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-head b{font-size:15px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-grid i{font-style:normal;font-size:11px;color:var(--muted);padding:2px 0}
+.cal-day{all:unset;box-sizing:border-box;cursor:pointer;height:38px;border-radius:10px;display:grid;place-items:center;font-variant-numeric:tabular-nums;font-size:14px;border:1px solid transparent}
+.cal-day:hover{background:var(--primary-soft)}
+.cal-day.today{border-color:var(--line-2);font-weight:700}
+.cal-day.off{color:var(--line-2)}
+.cal-day.on{background:var(--primary);color:var(--primary-ink);font-weight:700;box-shadow:0 3px 10px color-mix(in srgb,var(--primary) 35%,transparent)}
+.cal-day:focus-visible{outline:3px solid #e5b94f}
+.cal-quick{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:10px}
+.cal-list ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;max-height:330px;overflow:auto}
+.cal-list li{display:grid;grid-template-columns:26px 70px 1fr auto;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;background:var(--surface-2);font-size:13px}
+.cal-n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary-soft-ink);font-size:11px;font-weight:700}
+@media(max-width:700px){.cal-wrap{grid-template-columns:1fr}}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -898,6 +915,22 @@ function roomPicker(p){
    +rs.map(r=>'<label class="room-tile" data-g="'+esc(k)+'"><input type="checkbox" name="room" value="'+esc(r)+'"'+(sel.has(r)?' checked':'')+'><span class="room-no">'+esc(r)+'</span><small>'+(used(r)?used(r)+' ساعة تدريس':'غير مستخدمة')+'</small></label>').join('')+'</div></div>').join('')
   +'<div class="date-tools"><label>قاعة غير موجودة؟<input id="newRoom" placeholder="مثل 3410"></label><button type="button" class="secondary" data-room-add>+ إضافة قاعة</button></div></fieldset>';
 }
+// تقويم أيام الامتحانات: اضغط اليوم لاختياره أو إلغائه، أو اختر يوماً من الأسبوع لكل الشهر دفعة واحدة
+let calMonth='';
+function examCalendar(p){
+ const sel=new Set(p.dates),first=p.dates.length?[...p.dates].sort()[0]:today();
+ if(!calMonth)calMonth=first.slice(0,7);
+ const [y,m]=calMonth.split('-').map(Number),start=new Date(y,m-1,1),days=new Date(y,m,0).getDate(),lead=start.getDay();
+ const iso=d=>y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),inMonth=[...sel].filter(d=>d.startsWith(calMonth)).length;
+ let cells='';for(let i=0;i<lead;i++)cells+='<span></span>';
+ for(let d=1;d<=days;d++){const v=iso(d),wd=new Date(y,m-1,d).getDay(),off=wd===5||wd===6;
+  cells+='<button type="button" class="cal-day'+(sel.has(v)?' on':'')+(off?' off':'')+(v===today()?' today':'')+'" data-cal-day="'+v+'"'+(off?' title="عطلة"':'')+'>'+d+'</button>'}
+ return '<fieldset class="full exam-cal"><legend>📅 أيام الامتحانات <span class="room-count">'+p.dates.length+' يوماً</span></legend>'
+  +'<div class="cal-wrap"><div class="cal"><div class="cal-head"><button type="button" class="btn-sm secondary" data-cal-nav="-1" aria-label="الشهر السابق">›</button><b>'+start.toLocaleDateString('ar-IQ',{month:'long',year:'numeric'})+'</b><button type="button" class="btn-sm secondary" data-cal-nav="1" aria-label="الشهر التالي">‹</button></div>'
+  +'<div class="cal-grid">'+WEEKDAYS.map(w=>'<i>'+w.replace('ال','').slice(0,3)+'</i>').join('')+cells+'</div>'
+  +'<div class="cal-quick"><span class="muted">اختيار سريع لهذا الشهر:</span>'+['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'].map((w,i)=>'<button type="button" class="btn-sm secondary" data-cal-wd="'+i+'">كل '+w+'</button>').join('')+(inMonth?'<button type="button" class="btn-sm ghost-danger" data-cal-clear>مسح أيام هذا الشهر</button>':'')+'</div></div>'
+  +'<div class="cal-list"><b>الأيام المختارة</b>'+(p.dates.length?'<ol>'+[...p.dates].sort().map((d,i)=>'<li><span class="cal-n">'+(i+1)+'</span><span>'+dayOfDate(d)+'</span><span dir="ltr">'+d.split('-').reverse().join('/')+'</span><button type="button" class="chip-x" data-drop-date="'+d+'" aria-label="حذف اليوم">×</button></li>').join('')+'</ol>':'<p class="muted">اضغط على أيام التقويم لاختيارها.</p>')+'</div></div></fieldset>';
+}
 function planSettings(){
  const p=plan(),inc=new Set(poolIds()),grp=(list,label)=>list.length?'<div class="pool-group"><b>'+label+'</b><div class="chips">'+list.map(t=>'<label class="chip"><input type="checkbox" name="pool" value="'+esc(t.id)+'"'+(inc.has(t.id)?' checked':'')+'>'+esc(shortName(t.id))+'</label>').join('')+'</div></div>':'';
  return '<form id="planForm" class="plan-form">'
@@ -905,8 +938,7 @@ function planSettings(){
   +roomPicker(p)
   +'<label>مراقبون لكل قاعة<input name="perRoom" type="number" min="1" max="6" value="'+p.perRoom+'"></label>'
   +'<label>الاحتياط لكل يوم<input name="reserves" type="number" min="0" max="10" value="'+p.reserves+'"></label>'
-  +'<fieldset class="full"><legend>أيام الامتحانات ('+p.dates.length+')</legend><div class="chips date-chips">'+[...p.dates].sort().map(d=>'<span class="chip">'+dayOfDate(d)+' <span dir="ltr">'+d+'</span><button type="button" class="chip-x" data-drop-date="'+d+'" aria-label="حذف اليوم">×</button></span>').join('')+'</div>'
-  +'<div class="date-tools"><label>إضافة يوم<input type="date" id="addDate"></label><button type="button" class="secondary" data-add-date>إضافة</button><span class="muted">أو توليد أيام:</span><label>من<input type="date" id="genFrom"></label><label>عددها<input type="number" id="genCount" min="1" max="40" value="10"></label><div class="chips">'+['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'].map(d=>'<label class="chip"><input type="checkbox" class="genDay" value="'+d+'"'+(['الأحد','الثلاثاء','الخميس'].includes(d)?' checked':'')+'>'+d+'</label>').join('')+'</div><button type="button" class="secondary" data-gen-dates>توليد الأيام</button></div></fieldset>'
+  +examCalendar(p)
   +'<details class="full"><summary>المراقبون المشمولون ('+inc.size+' من '+db.teachers.length+') — ألغِ التحديد عن المعفَين</summary>'+grp(db.teachers.filter(t=>!isExternal(t)),'ملاك القسم')+grp(db.teachers.filter(isExternal),'تدريسيون خارجيون')+'</details>'
   +'<details class="full"><summary>👑 رؤساء القاعات ('+poolIds().filter(isHead).length+')'+(Array.isArray(p.heads)?'':' — محددون تلقائياً من حملة الدكتوراه')+'</summary><div class="chips">'+db.teachers.filter(t=>inc.has(t.id)).map(t=>'<label class="chip"><input type="checkbox" name="head" value="'+esc(t.id)+'"'+(isHead(t.id)?' checked':'')+'>'+esc(shortName(t.id))+'</label>').join('')+'</div></details>'
   +'<fieldset class="full"><legend>🚫 مستبعدون من المراقبة في أيام محددة</legend>'
@@ -1000,7 +1032,7 @@ function enhanceChecks(root=document){
  });
 }
 function enhanceTables(){
- document.querySelectorAll('#view .scroll').forEach(w=>{const tb=w.querySelector('table:not(.week):not(.tt-table) tbody');if(!tb||tb.rows.length<7)return;
+ document.querySelectorAll('#view .scroll').forEach(w=>{const tb=w.querySelector('table:not(.week):not(.tt-table):not(.inv-table) tbody');if(!tb||tb.rows.length<7)return;
   const i=document.createElement('input');i.type='search';i.className='table-search';i.placeholder='بحث في الجدول…';i.setAttribute('aria-label','بحث في الجدول');
   i.oninput=()=>{const q=i.value.trim();for(const r of tb.rows)r.hidden=!!q&&!r.textContent.includes(q)};w.before(i)});
 }
@@ -1060,7 +1092,7 @@ bind('restore',async(d,f)=>{try{const x=JSON.parse(await f.elements.file.files[0
 bind('adminForm',d=>{const e=d.email.trim().toLowerCase();if(!e.endsWith('@'+DOMAIN))return toast('يجب أن يكون البريد من نطاق '+DOMAIN);if(cloud.admins.includes(e))return toast('الحساب مشرف مسبقاً');setAdmins([...cloud.admins,e])});
 document.querySelectorAll('[data-admin-del]').forEach(b=>b.onclick=()=>{const e=b.dataset.adminDel;if(e===cloud.user.email.toLowerCase()&&!confirm('ستفقد صلاحية الإدارة بإزالة حسابك. متابعة؟'))return;setAdmins(cloud.admins.filter(x=>x!==e))});
 document.querySelectorAll('[data-study]').forEach(b=>b.onclick=()=>{schedStudy=b.dataset.study;render()});
-const ps=document.querySelector('.plan-settings');if(ps)ps.ontoggle=()=>{planOpen=ps.open};
+const ps=document.querySelector('.plan-settings');if(ps){ps.ontoggle=()=>{planOpen=ps.open};ps.addEventListener('click',e=>{if(e.target.closest('form'))planOpen=true})}
 const pf=$('#planForm');if(pf){
  pf.onsubmit=e=>{e.preventDefault();const p=plan(),d=new FormData(pf),inc=new Set(d.getAll('pool'));
   p.title=String(d.get('title')).trim()||'جدول المراقبات الامتحانية';p.rooms=sortRooms(d.getAll('room'));p.perRoom=Math.min(6,Math.max(1,Number(d.get('perRoom'))||3));p.reserves=Math.min(10,Math.max(0,Number(d.get('reserves'))||0));
@@ -1074,10 +1106,12 @@ const pf=$('#planForm');if(pf){
  const aa=pf.querySelector('[data-away-add]');if(aa)aa.onclick=()=>{const who=$('#awayWho').value,ds=[...pf.querySelectorAll('.awayDay:checked')].map(x=>x.value);if(!who||!ds.length)return toast('اختر التدريسي والأيام');const p=plan();p.away=p.away||{};p.away[who]=[...new Set([...(p.away[who]||[]),...ds])];
   for(const dt of ds){const g=p.grid[dt];if(!g)continue;for(const ids of Object.values(g.rooms)){const j=ids.indexOf(who);if(j>=0)ids[j]=''}const j=(g.reserve||[]).indexOf(who);if(j>=0)g.reserve[j]=''}
   commit('استُبعد '+shortName(who)+' من '+ds.length+' يوم'+(Object.keys(p.grid).length?'؛ أعد التوزيع لملء خاناته':''))};
- pf.querySelector('[data-add-date]').onclick=()=>{const v=$('#addDate').value;if(!v)return toast('اختر التاريخ');const p=plan();if(!p.dates.includes(v))p.dates.push(v);commit('أُضيف '+dayOfDate(v)+' '+v)};
- pf.querySelector('[data-gen-dates]').onclick=()=>{const from=$('#genFrom').value,n=Number($('#genCount').value)||0,days=[...pf.querySelectorAll('.genDay:checked')].map(x=>x.value);if(!from||!n||!days.length)return toast('حدّد تاريخ البداية وعدد الأيام وأيام الأسبوع');const p=plan(),d=new Date(from+'T00:00');let added=0,guard=0;while(added<n&&guard++<400){const iso=d.toLocaleDateString('en-CA');if(days.includes(dayOfDate(iso))&&!p.dates.includes(iso)){p.dates.push(iso);added++}d.setDate(d.getDate()+1)}commit('أُضيف '+added+' يوم امتحان')};
 }
 document.querySelectorAll('[data-away-del]').forEach(b=>b.onclick=()=>{delete plan().away[b.dataset.awayDel];commit('أُلغي الاستثناء')});
+document.querySelectorAll('[data-cal-day]').forEach(b=>b.onclick=()=>{const p=plan(),v=b.dataset.calDay;if(p.dates.includes(v)){p.dates=p.dates.filter(x=>x!==v);delete p.grid[v]}else p.dates.push(v);commit()});
+document.querySelectorAll('[data-cal-nav]').forEach(b=>b.onclick=()=>{const [y,m]=calMonth.split('-').map(Number),d=new Date(y,m-1+Number(b.dataset.calNav),1);calMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');render()});
+document.querySelectorAll('[data-cal-wd]').forEach(b=>b.onclick=()=>{const p=plan(),[y,m]=calMonth.split('-').map(Number),wd=Number(b.dataset.calWd),list=[];for(let d=1;d<=new Date(y,m,0).getDate();d++)if(new Date(y,m-1,d).getDay()===wd)list.push(y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'));const all=list.every(v=>p.dates.includes(v));if(all){p.dates=p.dates.filter(v=>!list.includes(v));list.forEach(v=>delete p.grid[v])}else p.dates=[...new Set([...p.dates,...list])];commit((all?'أُلغيت ':'اختيرت ')+'أيام '+WEEKDAYS[wd]+' في هذا الشهر')});
+document.querySelectorAll('[data-cal-clear]').forEach(b=>b.onclick=()=>{const p=plan();p.dates.filter(v=>v.startsWith(calMonth)).forEach(v=>delete p.grid[v]);p.dates=p.dates.filter(v=>!v.startsWith(calMonth));commit('مُسحت أيام هذا الشهر')});
 document.querySelectorAll('[data-drop-date]').forEach(b=>b.onclick=()=>{const p=plan(),v=b.dataset.dropDate;p.dates=p.dates.filter(x=>x!==v);delete p.grid[v];commit('حُذف اليوم '+v)});
 document.querySelectorAll('[data-distribute]').forEach(b=>b.onclick=()=>{if(Object.keys(plan().grid).length&&!confirm('إعادة الإنشاء تستبدل التوزيع الحالي بالكامل. متابعة؟'))return;const pf2=$('#planForm');if(pf2){pf2.requestSubmit()}distribute()});
 document.querySelectorAll('[data-slot]').forEach(c=>{c.onclick=()=>swapSlot(c.dataset.slot);c.onkeydown=e=>{if(e.key==='Enter')swapSlot(c.dataset.slot)}});
