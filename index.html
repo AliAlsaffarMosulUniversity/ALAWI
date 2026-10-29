@@ -557,8 +557,8 @@ function teacherDashboard(){
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
  return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (مطلوبة لتوليد الجدول فقط)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
- +section('دليل التدريسيين','<div class="tools">'+(isAdmin()?'<button data-action="quickImport">استيراد التدريسيين من Excel</button><button class="secondary" data-action="teacherTemplate">تنزيل نموذج Excel</button><input id="quickExcel" type="file" accept=".xlsx,.xls" hidden>':'')+'<button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+(isAdmin()?'<p class="muted">الاستيراد يضيف كل صفوف الملف دفعة واحدة. من كان قسمه «إدارة الأعمال» يُضاف إلى ملاك القسم، وغيره يُضاف خارجياً. الأسماء الموجودة مسبقاً تُتجاوز.</p>':'')+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
- +section('التدريسيون الخارجيون','<p class="muted">يظهرون في قوائم الاختيار تحت «تدريسيون خارجيون»، فيمكن تكليفهم بالمراقبات والمواد واللجان عند الحاجة.</p>'+teacherTable(db.teachers.filter(isExternal),true));
+ +section('دليل التدريسيين','<div class="tools">'+(isAdmin()?'<button data-action="quickImport">📥 استيراد تدريسيي القسم</button><button data-action="quickImportExt">📥 استيراد تدريسيين خارجيين</button><button class="secondary" data-action="teacherTemplate">تنزيل نموذج Excel</button><input id="quickExcel" type="file" accept=".xlsx,.xls" hidden>':'')+'<button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+(isAdmin()?'<p class="muted">الاستيراد يضيف كل صفوف الملف دفعة واحدة. من كان قسمه «إدارة الأعمال» يُضاف إلى ملاك القسم، وغيره يُضاف خارجياً. الأسماء الموجودة مسبقاً تُتجاوز.</p>':'')+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
+ +section('التدريسيون الخارجيون ('+db.teachers.filter(isExternal).length+')',(isAdmin()?'<div class="tools"><button class="secondary" data-action="quickImportExt">📥 استيراد قائمة خارجيين من Excel</button></div>':'')+'<p class="muted">يظهرون أسفل تدريسيي القسم في كل قوائم الاختيار (المراقبات، رؤساء القاعات، الجدول الذكي، اللجان)، فيمكن تكليفهم وتوزيعهم كأي تدريسي.</p>'+teacherTable(db.teachers.filter(isExternal),true));
 }
 const teacherOrg=t=>[t.department,t.college].filter(Boolean).join(' – ')||t.affiliation||'';
 function teacherTable(list,ext){
@@ -1114,7 +1114,7 @@ function generateSchedule(){
  save();render();
 }
 function action(a){
-if(a==='exitView')return setViewAs('');if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0]);i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
+if(a==='exitView')return setViewAs('');if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
 if(a==='backup')download('smart-department-backup-'+today()+'.json',JSON.stringify(db,null,2),'application/json');
 if(a==='generate'){if(!db.courses.length)return toast('أضف المواد أولاً');generateSchedule()}
 if(a==='ttImport'){const i=$('#ttFile');i.value='';i.onchange=()=>ttImport(i.files[0]);i.click()}
@@ -1125,8 +1125,9 @@ let importRows=[],importBook=null,importMessage='';
 // أعمدة نموذج Excel بالترتيب المعتمد، ثم أعمدة اختيارية تُقرأ إن وُجدت
 const TEMPLATE=[['email','Email Address'],['name','الاسم الرباعي واللقب'],['college','الكلية'],['department','القسم'],['degree','الشهادة'],['rank','العنوان الوظيفي او اللقب العلمي'],['phone','رقم الهاتف']];
 const IMPORT_FIELDS=[
- ['email',['Email Address','Email','E-mail','البريد الإلكتروني','البريد الالكتروني','البريد']],
- ['name',['الاسم الرباعي واللقب','الاسم الرباعي','الاسم','اسم التدريسي','الاسم الكامل']],
+ // الترتيب يحدد الأولوية: البريد الجامعي الرسمي يُفضَّل على بريد مُرسِل النموذج
+ ['email',['الايميل الجامعي الرسمي','الايميل الجامعي','البريد الجامعي','البريد الجامعي الرسمي','Email Address','Email','E-mail','البريد الإلكتروني','البريد الالكتروني','عنوان البريد الإلكتروني','الايميل','البريد']],
+ ['name',['الاسم الرباعي واللقب','الاسم الرباعي','اسم التدريسي الرباعي','اسم التدريسي الرباعي واللقب','الاسم','اسم التدريسي','الاسم الكامل']],
  ['college',['الكلية']],['department',['القسم']],['degree',['الشهادة']],
  ['rank',['العنوان الوظيفي او اللقب العلمي','العنوان الوظيفي','اللقب العلمي','اللقب']],
  ['phone',['رقم الهاتف','الهاتف']],
@@ -1148,12 +1149,13 @@ const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعا
 function validateTeacherRows(rows){
  if(!rows.length)throw Error('الورقة فارغة');
  const headers=rows[0].map(hk);
- const indexes=IMPORT_FIELDS.map(([,a])=>{const keys=a.map(hk);return headers.findIndex(h=>keys.includes(h))});
+ const indexes=IMPORT_FIELDS.map(([,a])=>{for(const k of a.map(hk)){const i=headers.indexOf(k);if(i>=0)return i}return -1});
  if(indexes[1]<0)throw Error('يجب أن يحتوي الصف الأول على عمود «الاسم الرباعي واللقب»');
  const seen=new Set(db.teachers.map(t=>norm(t.name)));
  return rows.slice(1).map((row,i)=>{
  const r={};IMPORT_FIELDS.forEach(([k],n)=>r[k]=indexes[n]<0?'':norm(row[indexes[n]]));
  if(!Object.values(r).some(Boolean))return null;
+ r.email=r.email.toLowerCase();
  if(/^7\d{9}$/.test(r.phone))r.phone='0'+r.phone; // Excel يحذف الصفر الأول من الأرقام العراقية
  const days=[...new Set(r.days.split(/[,،;؛\n]/).map(norm).filter(Boolean))],type=rowType(r.type,r.department);
  const error=!r.name?'الاسم مطلوب':r.name.length>150?'الاسم طويل جداً':seen.has(r.name)?'اسم مكرر في الملف أو الدليل':days.some(d=>!dayNames.includes(d))?'أيام تواجد غير صحيحة':r.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)?'بريد إلكتروني غير صحيح':type===null?'النوع يجب أن يكون «ملاك القسم» أو «خارجي»':'';
@@ -1193,8 +1195,10 @@ function selectExcelSheet(){
 }
 async function downloadTemplate(){try{const X=await getSheetJs(),book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet([TEMPLATE.map(f=>f[1])]);sheet['!cols']=[{wch:32},{wch:36},{wch:24},{wch:22},{wch:14},{wch:30},{wch:18}];X.utils.book_append_sheet(book,sheet,'التدريسيون');X.writeFile(book,'teachers-template.xlsx')}catch(e){toast(e.message)}}
 // استيراد مباشر من صفحة التدريسيون: أول ورقة في الملف، وتُضاف كل الصفوف الصالحة دون خطوة مراجعة
-async function quickImport(f){
+// as: '' تدريسيو القسم، 'external' خارجيون؛ يُطبَّق على الصفوف التي لا تحدد القسم أو النوع
+async function quickImport(f,as){
  if(!f)return;
+ const prevType=importType;importType=as??(/خارج/.test(f.name)?'external':importType);
  if(!/\.(xlsx|xls)$/i.test(f.name)||f.size>5*1024*1024)return toast('اختر ملف Excel لا يتجاوز 5 ميغابايت');
  toast('جارٍ قراءة الملف…');
  try{
@@ -1210,6 +1214,7 @@ async function quickImport(f){
   const ext=teachers.filter(isExternal).length;
   render();toast('تمت إضافة '+teachers.length+' تدريسي ('+(teachers.length-ext)+' من الملاك، '+ext+' خارجي)'+(skipped.length?'، واستُبعد '+skipped.length+' صف: '+[...new Set(skipped.map(r=>r.error))].join('، '):''));
  }catch(e){toast('تعذر الاستيراد: '+e.message)}
+ finally{importType=prevType}
 }
 function bindAdmin(){
  document.getElementById('importType').onchange=e=>{importType=e.target.value;if(importBook)selectExcelSheet()};
