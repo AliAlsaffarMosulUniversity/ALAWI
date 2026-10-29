@@ -6,30 +6,34 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f3f6f5;--surface:#fff;--surface-2:#f8faf9;--text:#183239;--muted:#5e7872;--line:#e1e9e5;--line-2:#cddbd6;--primary:#14685f;--primary-ink:#fff;--primary-soft:#e4f0ec;--primary-soft-ink:#245b50;--side:#123b39;--side-ink:#fff;--side-muted:#b8cfcb;--danger:#b53636;--danger-soft:#fbeaea;--warn:#8a6a12;--warn-soft:#fff6dc;--ok:#1f7a4d;--ok-soft:#e3f4ea;--shadow:0 1px 2px rgba(16,40,36,.05),0 6px 18px rgba(16,40,36,.05);color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1716;--surface:#16211f;--surface-2:#1b2826;--text:#e3ece9;--muted:#93aaa4;--line:#26332f;--line-2:#33443f;--primary:#3fb3a3;--primary-ink:#06201c;--primary-soft:#1d3532;--primary-soft-ink:#9fded4;--side:#0b1312;--side-ink:#e3ece9;--side-muted:#8fa8a2;--danger:#ef7b7b;--danger-soft:#3a1d1d;--warn:#f0c560;--warn-soft:#352c14;--ok:#6fd39e;--ok-soft:#173226;--shadow:none;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0f1716;--surface:#16211f;--surface-2:#1b2826;--text:#e3ece9;--muted:#93aaa4;--line:#26332f;--line-2:#33443f;--primary:#3fb3a3;--primary-ink:#06201c;--primary-soft:#1d3532;--primary-soft-ink:#9fded4;--side:#0b1312;--side-ink:#e3ece9;--side-muted:#8fa8a2;--danger:#ef7b7b;--danger-soft:#3a1d1d;--warn:#f0c560;--warn-soft:#352c14;--ok:#6fd39e;--ok-soft:#173226;--shadow:none;color-scheme:dark}
+:root{--bg:#f3f6f5;--surface:#fff;--surface-2:#f8faf9;--text:#183239;--muted:#5e7872;--line:#e1e9e5;--line-2:#cddbd6;--primary:#14685f;--primary-ink:#fff;--primary-soft:#e4f0ec;--primary-soft-ink:#245b50;--side:#0f2747;--side-2:#163560;--side-ink:#fff;--side-muted:#b9c8de;--side-accent:#f5c451;--danger:#b53636;--danger-soft:#fbeaea;--warn:#8a6a12;--warn-soft:#fff6dc;--ok:#1f7a4d;--ok-soft:#e3f4ea;--shadow:0 1px 2px rgba(16,40,36,.05),0 6px 18px rgba(16,40,36,.05);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1716;--surface:#16211f;--surface-2:#1b2826;--text:#e3ece9;--muted:#93aaa4;--line:#26332f;--line-2:#33443f;--primary:#3fb3a3;--primary-ink:#06201c;--primary-soft:#1d3532;--primary-soft-ink:#9fded4;--side:#0a1a30;--side-2:#11264a;--side-ink:#f2f6fc;--side-muted:#9fb2cf;--side-accent:#f5c451;--danger:#ef7b7b;--danger-soft:#3a1d1d;--warn:#f0c560;--warn-soft:#352c14;--ok:#6fd39e;--ok-soft:#173226;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1716;--surface:#16211f;--surface-2:#1b2826;--text:#e3ece9;--muted:#93aaa4;--line:#26332f;--line-2:#33443f;--primary:#3fb3a3;--primary-ink:#06201c;--primary-soft:#1d3532;--primary-soft-ink:#9fded4;--side:#0a1a30;--side-2:#11264a;--side-ink:#f2f6fc;--side-muted:#9fb2cf;--side-accent:#f5c451;--danger:#ef7b7b;--danger-soft:#3a1d1d;--warn:#f0c560;--warn-soft:#352c14;--ok:#6fd39e;--ok-soft:#173226;--shadow:none;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
 button,input,select,textarea{font:inherit}
-aside{position:fixed;right:0;top:0;bottom:0;width:250px;background:var(--side);color:var(--side-ink);padding:24px 16px;overflow:auto;z-index:20}
+aside{position:fixed;right:0;top:0;bottom:0;width:250px;background:linear-gradient(180deg,var(--side-2),var(--side) 55%);color:var(--side-ink);padding:24px 16px;overflow:auto;z-index:20;transition:transform .25s ease}
+.brand{padding-bottom:16px;border-bottom:1px solid #ffffff1f}
 .brand small{display:block;color:var(--side-muted);font-size:12px;line-height:1.8}
 .brand h1{font-size:21px;margin:6px 0 2px}
 nav{display:grid;gap:18px;margin-top:26px}
 .nav-group{display:grid;gap:3px}
-.nav-group>span{font-size:11px;color:var(--side-muted);padding:0 12px 4px;letter-spacing:.02em}
-nav button{all:unset;cursor:pointer;padding:9px 12px;border-radius:9px;font-size:14px;color:var(--side-ink)}
-nav button:hover{background:#ffffff14}
-nav button.active{background:#ffffff24;font-weight:600}
+.nav-group>span{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--side-accent);padding:0 12px 6px}
+.nav-group>span::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--side-accent) 45%,transparent))}
+nav button{all:unset;cursor:pointer;padding:9px 12px;border-radius:9px;font-size:14px;color:var(--side-ink);transition:background .15s}
+nav button:hover{background:#ffffff1a}
+nav button.active{background:#fff;color:var(--side);font-weight:700;box-shadow:0 4px 12px #0003}
 nav button:focus-visible{outline:2px solid #e5b94f}
-main{margin-right:250px;padding:26px 32px;max-width:1400px}
+main{margin-right:250px;padding:26px 32px;max-width:1400px;transition:margin .25s ease}
+body.nav-hidden aside{transform:translateX(100%)}
+body.nav-hidden main{margin-right:auto;margin-left:auto}
 .top{display:flex;justify-content:space-between;align-items:center;gap:14px}
 .top h1{font-size:24px;margin:2px 0 0}
 .top small{color:var(--muted)}
 .top-tools{display:flex;align-items:center;gap:10px}
 .badge{background:var(--primary-soft);color:var(--primary-soft-ink);padding:6px 12px;border-radius:30px;font-size:12px}
 .icon-btn{background:var(--surface);color:var(--text);border:1px solid var(--line);width:40px;height:40px;padding:0;border-radius:10px;font-size:18px}
-.menu-btn{display:none}
+.menu-btn{display:inline-grid;place-items:center}
 .notice{background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:10px;font-size:13px;margin:18px 0}
 .notice summary{cursor:pointer;font-weight:500}
 .notice p{margin:8px 0 0;line-height:1.9}
@@ -235,7 +239,6 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
  aside{transform:translateX(100%);transition:transform .2s;width:270px;box-shadow:-8px 0 30px rgba(0,0,0,.25)}
  body.nav-open aside{transform:none}
  body.nav-open .overlay{display:block;position:fixed;inset:0;background:#0006;z-index:15}
- .menu-btn{display:inline-block}
  main{margin:0;padding:16px}
  .grid{grid-template-columns:1fr}
  .badge{display:none}
@@ -248,7 +251,7 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
 <body>
 <aside id="sidebar"><div class="brand"><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
 <div class="overlay" id="overlay"></div>
-<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="فتح القائمة">☰</button><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
+<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
 <details class="notice" id="notice"><summary id="noticeSummary">نسخة تجريبية: البيانات محفوظة على هذا المتصفح فقط</summary><p id="noticeText">لا تتزامن البيانات بين الأجهزة، فصدّر نسخة احتياطية دورياً. تبديل العرض إلى «تدريسي» للتجربة وليس تسجيل دخول أو صلاحيات آمنة. الملفات المرفقة تُسجّل أسماؤها فقط ولا تُرفع إلى خادم.</p></details>
 <div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
 <script src="firebase-config.js"></script>
@@ -556,7 +559,7 @@ function enhanceTables(){
   const i=document.createElement('input');i.type='search';i.className='table-search';i.placeholder='بحث في الجدول…';i.setAttribute('aria-label','بحث في الجدول');
   i.oninput=()=>{const q=i.value.trim();for(const r of tb.rows)r.hidden=!!q&&!r.textContent.includes(q)};w.before(i)});
 }
-function go(p){if(!isAdmin()&&!TEACHER_PAGES.includes(p))p=0;if(!isAdmin()&&p===3&&person&&!scheduleFilter)scheduleFilter='t:'+person;page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');render();scrollTo(0,0)}
+function go(p){if(!isAdmin()&&!TEACHER_PAGES.includes(p))p=0;if(!isAdmin()&&p===3&&person&&!scheduleFilter)scheduleFilter='t:'+person;page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');syncMenuBtn();render();scrollTo(0,0)}
 function render(){
 if(cloud.on&&!cloud.ready)return;
 applyView();
@@ -1059,8 +1062,13 @@ async function setAdmins(emails){
 function applyTheme(t){if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme}
 try{applyTheme(localStorage.getItem('smart-department-theme')||'')}catch{}
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme,dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches,t=dark?'light':'dark';applyTheme(t);try{localStorage.setItem('smart-department-theme',t)}catch{}};
-$('#menu').onclick=()=>document.body.classList.toggle('nav-open');
-$('#overlay').onclick=()=>document.body.classList.remove('nav-open');
+// على الهاتف تُفتح القائمة فوق الصفحة، وعلى الحاسوب تُطوى ويتذكر المتصفح الاختيار
+const narrow=()=>matchMedia('(max-width:900px)').matches;
+function syncMenuBtn(){const open=narrow()?document.body.classList.contains('nav-open'):!document.body.classList.contains('nav-hidden');$('#menu').setAttribute('aria-expanded',open);$('#menu').setAttribute('aria-label',open?'إخفاء القائمة':'إظهار القائمة');$('#menu').title=open?'إخفاء القائمة':'إظهار القائمة'}
+try{if(localStorage.getItem('smart-department-nav')==='hidden')document.body.classList.add('nav-hidden')}catch{}
+$('#menu').onclick=()=>{if(narrow())document.body.classList.toggle('nav-open');else{const h=document.body.classList.toggle('nav-hidden');try{localStorage.setItem('smart-department-nav',h?'hidden':'shown')}catch{}}syncMenuBtn()};
+syncMenuBtn();
+$('#overlay').onclick=()=>{document.body.classList.remove('nav-open');syncMenuBtn()};
 $('#date').textContent=new Date().toLocaleDateString('ar-IQ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 $('#syncApply').onclick=()=>render();
 document.addEventListener('input',e=>{if(e.target.closest('#view form'))cloud.dirty=true});
