@@ -290,6 +290,8 @@ tr.day-start td,tr.day-start th{border-top:3px solid var(--line-2)}
 .room-tile:has(input:checked) .room-no{color:var(--primary-soft-ink)}
 .room-tile:has(input:checked)::after{content:'✓';position:absolute;top:4px;left:8px;color:var(--primary);font-weight:700}
 .room-tile:has(input:focus-visible){outline:3px solid #e5b94f}
+.bulk-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
+.bulk-bar span{font-size:12px;color:var(--muted);margin-inline-start:4px}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -757,7 +759,7 @@ function stageGrid(st,n,items,secs){
 // ---------------------------------------------------------------- تعديل خانة من الجدول
 function ttModal(html,bindFn){
  let dlg=$('#ttDialog');if(!dlg){dlg=document.createElement('dialog');dlg.id='ttDialog';document.body.append(dlg)}
- dlg.innerHTML=html;dlg.showModal();bindFn(dlg);
+ dlg.innerHTML=html;dlg.showModal();bindFn(dlg);enhanceChecks(dlg);
  dlg.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>dlg.close());
 }
 function editCell(key){
@@ -986,6 +988,17 @@ function fillEditing(){
  for(const el of f.elements){if(!el.name||el.type==='file')continue;const v=rec[el.name];if(el.type==='checkbox')el.checked=splitList(v).includes(el.value);else if(v!=null)el.value=v}
  f.closest('section').classList.add('editing');f.closest('section').scrollIntoView({block:'start',behavior:'smooth'});f.elements[0]?.focus({preventScroll:true});
 }
+// كل قائمة اختيارات طويلة (6 خيارات فأكثر) تحصل على «تحديد الكل / إلغاء الكل» وعدّاد للمحدد
+function enhanceChecks(root=document){
+ root.querySelectorAll('.chips').forEach(c=>{
+  const boxes=[...c.querySelectorAll('input[type=checkbox]')];if(boxes.length<6||c.dataset.bulk)return;c.dataset.bulk='1';
+  const bar=document.createElement('div');bar.className='bulk-bar';
+  bar.innerHTML='<button type="button" class="btn-sm secondary" data-on="1">✓ تحديد الكل</button><button type="button" class="btn-sm secondary" data-on="0">✕ إلغاء الكل</button><span></span>';
+  const upd=()=>{bar.querySelector('span').textContent='محدد '+boxes.filter(b=>b.checked).length+' من '+boxes.length};
+  bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{boxes.forEach(x=>{if(x.checked!==(b.dataset.on==='1')){x.checked=b.dataset.on==='1';x.dispatchEvent(new Event('change',{bubbles:true}))}});upd()});
+  boxes.forEach(x=>x.addEventListener('change',upd));upd();c.before(bar);
+ });
+}
 function enhanceTables(){
  document.querySelectorAll('#view .scroll').forEach(w=>{const tb=w.querySelector('table:not(.week):not(.tt-table) tbody');if(!tb||tb.rows.length<7)return;
   const i=document.createElement('input');i.type='search';i.className='table-search';i.placeholder='بحث في الجدول…';i.setAttribute('aria-label','بحث في الجدول');
@@ -1088,7 +1101,7 @@ document.querySelectorAll('[data-tt-clear]').forEach(b=>b.onclick=()=>{if(!confi
 document.querySelectorAll('[data-print-stage]').forEach(b=>b.onclick=()=>{const blk=b.closest('.stage-block');blk.classList.add('print-only');document.body.classList.add('print-one');print();blk.classList.remove('print-only');document.body.classList.remove('print-one')});
 document.querySelectorAll('[data-chunked]').forEach(b=>b.onclick=()=>openChunked(JSON.parse(b.dataset.chunked)));
 document.querySelectorAll('.attach-img').forEach(i=>i.onclick=async()=>{const w=window.open();w.location=URL.createObjectURL(await (await fetch(i.src)).blob())});
-fillEditing();enhanceTables();
+fillEditing();enhanceTables();enhanceChecks();
 }
 function generateSchedule(){
  const fixed=db.schedule.filter(x=>!x.gen&&SLOTS.includes(x.slot)),result=[],failed=[],tDays=id=>teacherDays(db.teachers.find(t=>t.id===id));
