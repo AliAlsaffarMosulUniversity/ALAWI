@@ -36,6 +36,14 @@ service cloud.firestore {
         && col in ['teachers', 'announcements', 'courses', 'invigilation', 'tasks', 'committees', 'polls', 'meta'];
     }
 
+    // البحوث الأكاديمية: يقرؤها كل حساب جامعي، ويضيف التدريسي بحوثه ويعدّلها ويحذفها، والمشرفون للجميع
+    match /research/{id} {
+      allow read: if signedIn();
+      allow create: if isAdmin() || ownsTeacher(request.resource.data.teacher);
+      allow update: if isAdmin() || (ownsTeacher(resource.data.teacher) && ownsTeacher(request.resource.data.teacher));
+      allow delete: if isAdmin() || ownsTeacher(resource.data.teacher);
+    }
+
     // العبء التدريسي: لرئيس القسم والمشرفين فقط
     match /workloads/{id} {
       allow read, write: if isAdmin();
