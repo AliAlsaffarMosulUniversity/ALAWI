@@ -306,9 +306,16 @@ tr.day-start td,tr.day-start th{border-top:3px solid var(--line-2)}
 .cal-day:focus-visible{outline:3px solid #e5b94f}
 .cal-quick{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:10px}
 .cal-list ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;max-height:330px;overflow:auto}
-.cal-list li{display:grid;grid-template-columns:26px 70px 1fr auto;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;background:var(--surface-2);font-size:13px}
+.cal-list li{display:grid;grid-template-columns:26px 62px 1fr auto auto;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;background:var(--surface-2);font-size:13px}
 .cal-n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary-soft-ink);font-size:11px;font-weight:700}
 @media(max-width:700px){.cal-wrap{grid-template-columns:1fr}}
+.rank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.rank-card{display:grid;gap:2px;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
+.rank-card.empty{opacity:.55}
+.rank-card span{display:flex;align-items:center;gap:4px}.rank-card input{width:80px}
+.rank-card small{color:var(--muted);font-size:12px}.rank-est{color:var(--primary)!important;font-weight:600}
+.inv-subs{display:block;font-style:normal;font-size:11px;font-weight:400;margin-top:4px;color:var(--warn)}
+.bars>div{grid-template-columns:200px 1fr 34px}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -875,33 +882,74 @@ const isAway=(id,date)=>(plan().away?.[id]||[]).includes(date);
 // رئيس القاعة يُفضَّل أن يكون من حملة الدكتوراه أو من الألقاب العليا، كما في فورمة القسم
 const isSenior=id=>{const t=db.teachers.find(x=>x.id===id)||{};return /دكتوراه/.test(t.degree||'')||/^د\s*\./.test(t.name||'')||/^(أ|ا)ستاذ/.test(t.rank||'')};
 function shortName(id){const t=db.teachers.find(x=>x.id===id);if(!t)return '—';const w=String(t.name).replace(/^(د|أ|م|م\.م)\.\s*/,'').split(/\s+/).filter(Boolean);return (isSenior(id)?'د.':'أ.')+(w.length>1?w[0]+' '+w.at(-1):w[0]||'')}
-function dutyCounts(){const c={};for(const g of Object.values(plan().grid)){for(const ids of Object.values(g.rooms||{}))ids.forEach(id=>{if(id)c[id]=(c[id]||0)+1});(g.reserve||[]).forEach(id=>{if(id)c[id]=(c[id]||0)+.5})}return c}
+function dutyCounts(){const c={};for(const g of Object.values(plan().grid)){for(const ids of Object.values(g.rooms||{}))ids.forEach(id=>{if(id)c[id]=(c[id]||0)+1});(g.reserve||[]).forEach(id=>{if(id)c[id]=(c[id]||0)+1})}return c}
 function planDuties(id){const out=[],p=db.examPlan;if(!p)return out;for(const [date,g] of Object.entries(p.grid||{})){for(const [room,ids] of Object.entries(g.rooms||{}))if(ids.includes(id))out.push({exam:p.title,date,room,head:ids[0]===id,start:'',end:''});if((g.reserve||[]).includes(id))out.push({exam:p.title+' (احتياط)',date,room:'',reserve:true,start:'',end:''})}return out}
 const dutiesOf=id=>[...db.invigilation.filter(x=>x.teacher===id),...planDuties(id)].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+// ---------------------------------------------------------------- العدالة حسب اللقب العلمي
+const RANK_KEYS=[['prof','أستاذ'],['ap','أستاذ مساعد'],['l','مدرس'],['al','مدرس مساعد'],['other','غير محدد']];
+const DEFAULT_WEIGHTS={prof:50,ap:75,l:100,al:100,other:100};
+function rankKey(id){const r=hk((db.teachers.find(t=>t.id===id)||{}).rank||'');return /استاذ مساعد/.test(r)?'ap':/استاذ/.test(r)?'prof':/مدرس مساعد/.test(r)?'al':/مدرس/.test(r)?'l':'other'}
+const weightOf=id=>Math.max(5,Number((plan().rankWeights||DEFAULT_WEIGHTS)[rankKey(id)]??100))/100;
+// ---------------------------------------------------------------- مواد كل يوم امتحاني: مدرّسوها لا يُكلَّفون بالمراقبة في ذلك اليوم
+function examSubjectGroups(){
+ const out=[];
+ for(const [st] of STUDIES)for(const n of [1,2,3,4]){
+  const names=[...new Set(sched().filter(x=>studyOf(x)===st&&x.stage===n&&x.kind!=='محاضرة إرشادية').map(x=>x.course))];
+  if(!names.length&&st==='morning')curriculumOf(n).forEach(c=>names.push(c.name));
+  if(names.length)out.push({st,n,names:names.sort((a,b)=>a.localeCompare(b,'ar'))});
+ }
+ return out;
+}
+function teachersOfSubject(sub){
+ const ids=new Set(sched().filter(x=>studyOf(x)===sub.st&&x.stage===sub.n&&hk(x.course)===hk(sub.course)&&x.teacher).map(x=>x.teacher));
+ const P=db.ttPlans?.[sub.st+sub.n];(P?.courses||[]).filter(c=>hk(c.name)===hk(sub.course)).forEach(c=>Object.values(c.teachers||{}).forEach(t=>t&&ids.add(t)));
+ return ids;
+}
+function bannedOn(date){const set=new Set();(plan().subjects?.[date]||[]).forEach(sub=>teachersOfSubject(sub).forEach(id=>set.add(id)));return set}
+const blockedReason=(id,date)=>isAway(id,date)?'مستبعد في هذا اليوم':bannedOn(date).has(id)?'يدرّس مادة تُمتحن في هذا اليوم':'';
 function distribute(){
  const p=plan(),pool=poolIds(),count={},rooms={},pairs={};
  if(!p.dates.length||!p.rooms.length)return toast('حدّد أيام الامتحانات والقاعات أولاً');
  const need=p.rooms.length*p.perRoom+p.reserves;
  const rnd={};pool.forEach(id=>{count[id]=0;rnd[id]=Math.random()});
+ // الأولوية لمن هو أبعد عن حصته العادلة: عدد أيامه مقسوماً على وزن لقبه العلمي
+ const ratio=id=>(count[id]+1)/weightOf(id);
  p.grid={};let short=0;
  for(const date of [...p.dates].sort()){
-  const used=new Set(),g={rooms:{},reserve:[]};
+  const used=new Set(),g={rooms:{},reserve:[]},banned=bannedOn(date),free=id=>!used.has(id)&&!isAway(id,date)&&!banned.has(id);
+  const take=id=>{used.add(id);count[id]++};
   const pick=(room,headSlot,mates)=>{
    let best=null,bs=Infinity;
-   for(const id of pool){if(used.has(id)||isAway(id,date))continue;
-    const sc=count[id]*10+(rooms[id]?.includes(room)?4:0)+mates.reduce((n,m)=>n+(pairs[[id,m].sort().join()]||0),0)*3+(headSlot?(isHead(id)?0:60):(isHead(id)?6:0))+rnd[id];
+   for(const id of pool){if(!free(id))continue;
+    const sc=ratio(id)*100+(rooms[id]?.includes(room)?4:0)+mates.reduce((n,m)=>n+(pairs[[id,m].sort().join()]||0),0)*3+(headSlot?(isHead(id)?0:400):(isHead(id)?3:0))+rnd[id];
     if(sc<bs){bs=sc;best=id}}
-   if(best){used.add(best);count[best]++;(rooms[best]=rooms[best]||[]).push(room)}else short++;
+   if(best){take(best);(rooms[best]=rooms[best]||[]).push(room)}else short++;
    return best||'';
   };
   for(const room of p.rooms){const ids=[];for(let k=0;k<p.perRoom;k++)ids.push(pick(room,k===0,ids.filter(Boolean)));g.rooms[room]=ids;
    const real=ids.filter(Boolean);real.forEach((a,i)=>real.slice(i+1).forEach(b=>{const k=[a,b].sort().join();pairs[k]=(pairs[k]||0)+1}))}
-  for(let k=0;k<p.reserves;k++){let best=null,bs=Infinity;for(const id of pool){if(used.has(id)||isAway(id,date))continue;const sc=count[id]*10+rnd[id];if(sc<bs){bs=sc;best=id}}if(best){used.add(best);count[best]+=.5;g.reserve.push(best)}}
+  for(let k=0;k<p.reserves;k++){let best=null,bs=Infinity;for(const id of pool){if(!free(id))continue;const sc=ratio(id)*100+rnd[id];if(sc<bs){bs=sc;best=id}}if(best){take(best);g.reserve.push(best)}else short++}
   p.grid[date]=g;
  }
- const vals=pool.map(id=>count[id]);
  scheduleMsg=null;
- commit(short?'⚠ وُزّع المراقبون، لكن العدد لا يكفي: يلزم '+need+' مراقباً في اليوم الواحد والمتاح '+pool.length:'✓ وُزّع المراقبون على '+p.dates.length+' يوماً · لكل مراقب بين '+Math.floor(Math.min(...vals))+' و'+Math.ceil(Math.max(...vals))+' مراقبات');
+ const byRank=RANK_KEYS.map(([k,l])=>{const v=pool.filter(id=>rankKey(id)===k).map(id=>count[id]);if(!v.length)return '';const a=Math.min(...v),b=Math.max(...v);return l+': '+(a===b?a:a+'–'+b)}).filter(Boolean).join(' · ');
+ commit(short?'⚠ أُنشئ الجدول لكن العدد لا يكفي: يلزم '+need+' مراقباً يومياً بعد الاستثناءات. '+byRank:'✓ أُنشئ جدول المراقبات دون تعارض · أيام كل لقب: '+byRank);
+}
+function rankWeightsBox(p){
+ const w=p.rankWeights||DEFAULT_WEIGHTS,pool=poolIds(),slots=p.dates.length*(p.rooms.length*p.perRoom+p.reserves),sumW=pool.reduce((a,id)=>a+weightOf(id),0)||1;
+ return '<fieldset class="full rank-box"><legend>⚖️ توزيع أيام المراقبة حسب اللقب العلمي</legend><p class="muted">يتساوى عدد أيام المراقبة بين أصحاب اللقب الواحد، والنسبة تحدد نصيب كل لقب مقارنةً بالمدرّس (100%).</p><div class="rank-grid">'
+  +RANK_KEYS.map(([k,l])=>{const n=pool.filter(id=>rankKey(id)===k).length,each=n?slots*((Number(w[k]??100)||5)/100)/sumW:0;return '<label class="rank-card'+(n?'':' empty')+'"><b>'+l+'</b><small>'+n+' مراقباً</small><span><input type="number" name="w-'+k+'" min="5" max="200" step="5" value="'+esc(w[k]??100)+'">%</span><small class="rank-est">≈ '+(n?Math.round(each*10)/10:0)+' يوماً لكل منهم</small></label>'}).join('')+'</div></fieldset>';
+}
+function subjectsDialog(date){
+ const p=plan(),cur=p.subjects?.[date]||[],has=(st,n,c)=>cur.some(x=>x.st===st&&x.n===n&&hk(x.course)===hk(c)),groups=examSubjectGroups();
+ ttModal('<form method="dialog" class="tt-form"><h3>📝 مواد امتحان '+dayOfDate(date)+' <span dir="ltr">'+date+'</span></h3><p class="muted">مدرّسو المواد المختارة لا يُكلَّفون بالمراقبة في هذا اليوم.</p>'
+  +(groups.length?groups.map(g=>'<fieldset><legend>'+stageName(g.n)+' · '+studyName(g.st)+'</legend><div class="chips">'+g.names.map(c=>'<label class="chip"><input type="checkbox" name="sub" value="'+esc(JSON.stringify({st:g.st,n:g.n,course:c}))+'"'+(has(g.st,g.n,c)?' checked':'')+'>'+esc(c)+'</label>').join('')+'</div></fieldset>').join(''):'<p class="muted">لا توجد مواد. استورد الجداول الدراسية أولاً.</p>')
+  +'<div class="form-actions"><button>حفظ</button><button type="button" class="secondary" data-close>إلغاء</button></div></form>',dlg=>{
+  dlg.querySelector('form').onsubmit=e=>{e.preventDefault();p.subjects=p.subjects||{};p.subjects[date]=new FormData(e.target).getAll('sub').map(v=>JSON.parse(v));
+   // من صار ممنوعاً يُرفع من خانات هذا اليوم إن كان الجدول منشأً
+   const ban=bannedOn(date),g=p.grid[date];let removed=0;if(g){for(const ids of Object.values(g.rooms))ids.forEach((id,i)=>{if(ban.has(id)){ids[i]='';removed++}});(g.reserve||[]).forEach((id,i)=>{if(ban.has(id)){g.reserve[i]='';removed++}})}
+   dlg.close();commit('حُفظت مواد اليوم ('+p.subjects[date].length+')'+(removed?'؛ رُفع '+removed+' مراقباً يدرّسون هذه المواد، أعد الإنشاء لملء خاناتهم':''))};
+ });
 }
 // قاعات القسم: كل ما ورد في الجداول الدراسية وخطط التدريس وجدول المراقبات، مجمّعة حسب البناية (أول رقم)
 const sortRooms=list=>[...new Set(list.map(r=>String(r).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'en',{numeric:true}));
@@ -929,7 +977,7 @@ function examCalendar(p){
   +'<div class="cal-wrap"><div class="cal"><div class="cal-head"><button type="button" class="btn-sm secondary" data-cal-nav="-1" aria-label="الشهر السابق">›</button><b>'+start.toLocaleDateString('ar-IQ',{month:'long',year:'numeric'})+'</b><button type="button" class="btn-sm secondary" data-cal-nav="1" aria-label="الشهر التالي">‹</button></div>'
   +'<div class="cal-grid">'+WEEKDAYS.map(w=>'<i>'+w.replace('ال','').slice(0,3)+'</i>').join('')+cells+'</div>'
   +'<div class="cal-quick"><span class="muted">اختيار سريع لهذا الشهر:</span>'+['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'].map((w,i)=>'<button type="button" class="btn-sm secondary" data-cal-wd="'+i+'">كل '+w+'</button>').join('')+(inMonth?'<button type="button" class="btn-sm ghost-danger" data-cal-clear>مسح أيام هذا الشهر</button>':'')+'</div></div>'
-  +'<div class="cal-list"><b>الأيام المختارة</b>'+(p.dates.length?'<ol>'+[...p.dates].sort().map((d,i)=>'<li><span class="cal-n">'+(i+1)+'</span><span>'+dayOfDate(d)+'</span><span dir="ltr">'+d.split('-').reverse().join('/')+'</span><button type="button" class="chip-x" data-drop-date="'+d+'" aria-label="حذف اليوم">×</button></li>').join('')+'</ol>':'<p class="muted">اضغط على أيام التقويم لاختيارها.</p>')+'</div></div></fieldset>';
+  +'<div class="cal-list"><b>الأيام المختارة</b>'+(p.dates.length?'<ol>'+[...p.dates].sort().map((d,i)=>'<li><span class="cal-n">'+(i+1)+'</span><span>'+dayOfDate(d)+'</span><span dir="ltr">'+d.split('-').reverse().join('/')+'</span><button type="button" class="btn-sm '+((p.subjects?.[d]||[]).length?'':'secondary')+'" data-subjects="'+d+'">📝 '+((p.subjects?.[d]||[]).length?(p.subjects[d].length+' مواد'):'المواد')+'</button><button type="button" class="chip-x" data-drop-date="'+d+'" aria-label="حذف اليوم">×</button></li>').join('')+'</ol>':'<p class="muted">اضغط على أيام التقويم لاختيارها.</p>')+'</div></div></fieldset>';
 }
 function planSettings(){
  const p=plan(),inc=new Set(poolIds()),grp=(list,label)=>list.length?'<div class="pool-group"><b>'+label+'</b><div class="chips">'+list.map(t=>'<label class="chip"><input type="checkbox" name="pool" value="'+esc(t.id)+'"'+(inc.has(t.id)?' checked':'')+'>'+esc(shortName(t.id))+'</label>').join('')+'</div></div>':'';
@@ -939,6 +987,7 @@ function planSettings(){
   +'<label>مراقبون لكل قاعة<input name="perRoom" type="number" min="1" max="6" value="'+p.perRoom+'"></label>'
   +'<label>الاحتياط لكل يوم<input name="reserves" type="number" min="0" max="10" value="'+p.reserves+'"></label>'
   +examCalendar(p)
+  +rankWeightsBox(p)
   +'<details class="full"><summary>المراقبون المشمولون ('+inc.size+' من '+db.teachers.length+') — ألغِ التحديد عن المعفَين</summary>'+grp(db.teachers.filter(t=>!isExternal(t)),'ملاك القسم')+grp(db.teachers.filter(isExternal),'تدريسيون خارجيون')+'</details>'
   +'<details class="full"><summary>👑 رؤساء القاعات ('+poolIds().filter(isHead).length+')'+(Array.isArray(p.heads)?'':' — محددون تلقائياً من حملة الدكتوراه')+'</summary><div class="chips">'+db.teachers.filter(t=>inc.has(t.id)).map(t=>'<label class="chip"><input type="checkbox" name="head" value="'+esc(t.id)+'"'+(isHead(t.id)?' checked':'')+'>'+esc(shortName(t.id))+'</label>').join('')+'</div></details>'
   +'<fieldset class="full"><legend>🚫 مستبعدون من المراقبة في أيام محددة</legend>'
@@ -951,18 +1000,18 @@ function planGrid(){
  const p=plan(),dates=[...p.dates].sort(),cnt=dutyCounts(),admin=isAdmin();
  if(!dates.length)return '<p class="empty">أضف أيام الامتحانات من الإعدادات، ثم اضغط «توزيع المراقبين تلقائياً».</p>';
  const nm=(id,date,room,k)=>'<span class="inv-name'+(k===0?' head':'')+(id&&id===person?' me':'')+(admin?' editable':'')+'"'+(admin?' data-slot="'+esc([date,room,k].join('|'))+'" tabindex="0"':'')+'>'+(id?esc(shortName(id)):'<i>—</i>')+'</span>';
- const rows=dates.map(d=>{const g=p.grid[d]||{rooms:{},reserve:[]};return '<tr><th class="inv-date"><b>'+dayOfDate(d)+'</b><span dir="ltr">'+d+'</span></th>'+p.rooms.map(r=>'<td>'+Array.from({length:p.perRoom},(_,k)=>nm((g.rooms[r]||[])[k]||'',d,r,k)).join('')+'</td>').join('')+'<td class="inv-res">'+Array.from({length:p.reserves},(_,k)=>nm((g.reserve||[])[k]||'',d,'*',k+10)).join('')+'</td></tr>'}).join('');
+ const rows=dates.map(d=>{const g=p.grid[d]||{rooms:{},reserve:[]};return '<tr><th class="inv-date"><b>'+dayOfDate(d)+'</b><span dir="ltr">'+d+'</span>'+((p.subjects?.[d]||[]).length?'<em class="inv-subs">'+p.subjects[d].map(x=>'م'+x.n+' '+esc(x.course)).join('<br>')+'</em>':'')+'</th>'+p.rooms.map(r=>'<td>'+Array.from({length:p.perRoom},(_,k)=>nm((g.rooms[r]||[])[k]||'',d,r,k)).join('')+'</td>').join('')+'<td class="inv-res">'+Array.from({length:p.reserves},(_,k)=>nm((g.reserve||[])[k]||'',d,'*',k+10)).join('')+'</td></tr>'}).join('');
  const people=poolIds().map(id=>[id,cnt[id]||0]).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...people.map(x=>x[1]));
  return '<div class="scroll"><table class="inv-table"><thead><tr><th>التاريخ</th>'+p.rooms.map(r=>'<th>'+esc(r)+'</th>').join('')+'<th>الاحتياط</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
   +'<p class="muted">الاسم الأول في كل قاعة (بخط عريض) رئيس القاعة 👑.'+(admin?' اضغط أي اسم لتبديله.':'')+'</p>'
-  +(admin&&Object.keys(p.grid).length?'<details class="inv-stats"><summary>📊 عدد مراقبات كل تدريسي (الاحتياط = نصف)</summary><div class="bars">'+people.map(([id,n])=>'<div><span>'+esc(shortName(id))+'</span><i style="width:'+(n/max*100)+'%"></i><b>'+n+'</b></div>').join('')+'</div></details>':'');
+  +(admin&&Object.keys(p.grid).length?'<details class="inv-stats"><summary>📊 عدد أيام المراقبة لكل تدريسي (يشمل الاحتياط)</summary><div class="bars">'+people.map(([id,n])=>'<div><span>'+esc(shortName(id))+' <small class="muted">'+RANK_KEYS.find(([k])=>k===rankKey(id))[1]+'</small></span><i style="width:'+(n/max*100)+'%"></i><b>'+n+'</b></div>').join('')+'</div></details>':'');
 }
 function swapSlot(key){
  const [date,room,ks]=key.split('|'),k=Number(ks),p=plan(),g=p.grid[date]=p.grid[date]||{rooms:{},reserve:[]},isRes=room==='*',list=isRes?(g.reserve=g.reserve||[]):(g.rooms[room]=g.rooms[room]||[]),idx=isRes?k-10:k,cur=list[idx]||'';
  const busy=new Set([...Object.values(g.rooms).flat(),...(g.reserve||[])].filter(Boolean)),cnt=dutyCounts();
- const opts2=poolIds().map(id=>[id,cnt[id]||0]).sort((a,b)=>a[1]-b[1]).map(([id,n])=>'<option value="'+esc(id)+'"'+(id===cur?' selected':'')+'>'+esc(shortName(id))+' — '+n+(busy.has(id)&&id!==cur?' · مكلّف في هذا اليوم':'')+(isAway(id,date)?' · مستبعد في هذا اليوم':'')+(isHead(id)?' 👑':'')+'</option>').join('');
+ const opts2=poolIds().map(id=>[id,cnt[id]||0]).sort((a,b)=>a[1]-b[1]).map(([id,n])=>'<option value="'+esc(id)+'"'+(id===cur?' selected':'')+'>'+esc(shortName(id))+' — '+n+(busy.has(id)&&id!==cur?' · مكلّف في هذا اليوم':'')+(blockedReason(id,date)?' · ⛔ '+blockedReason(id,date):'')+(isHead(id)?' 👑':'')+'</option>').join('');
  ttModal('<form method="dialog" class="tt-form"><h3>تبديل مراقب</h3><p class="muted">'+dayOfDate(date)+' <span dir="ltr">'+date+'</span> · '+(isRes?'الاحتياط':'القاعة '+esc(room)+(idx===0?' (رئيس القاعة)':''))+'</p><label>المراقب<select name="who"><option value="">— فارغ —</option>'+opts2+'</select></label><div class="form-actions"><button>حفظ</button><button type="button" class="secondary" data-close>إلغاء</button></div></form>',dlg=>{
-  dlg.querySelector('form').onsubmit=e=>{e.preventDefault();const v=e.target.who.value;
+  dlg.querySelector('form').onsubmit=e=>{e.preventDefault();const v=e.target.who.value;if(v&&blockedReason(v,date))return toast('⛔ لا يمكن: '+shortName(v)+' '+blockedReason(v,date));
    if(v&&v!==cur&&busy.has(v)){for(const ids of Object.values(g.rooms)){const j=ids.indexOf(v);if(j>=0)ids[j]=cur}const j=(g.reserve||[]).indexOf(v);if(j>=0)g.reserve[j]=cur}
    list[idx]=v;dlg.close();commit(v&&busy.has(v)&&v!==cur?'تم التبديل بين المراقبَين في هذا اليوم':'تم الحفظ')};
  });
@@ -1097,6 +1146,7 @@ const pf=$('#planForm');if(pf){
  pf.onsubmit=e=>{e.preventDefault();const p=plan(),d=new FormData(pf),inc=new Set(d.getAll('pool'));
   p.title=String(d.get('title')).trim()||'جدول المراقبات الامتحانية';p.rooms=sortRooms(d.getAll('room'));p.perRoom=Math.min(6,Math.max(1,Number(d.get('perRoom'))||3));p.reserves=Math.min(10,Math.max(0,Number(d.get('reserves'))||0));
   p.exclude=db.teachers.filter(t=>!inc.has(t.id)).map(t=>t.id);
+  p.rankWeights=Object.fromEntries(RANK_KEYS.map(([k])=>[k,Math.min(200,Math.max(5,Number(d.get('w-'+k))||100))]));
   if(pf.querySelector('[name=head]')){const hs=d.getAll('head');const auto=poolIds().filter(isSenior);p.heads=hs.length===auto.length&&hs.every(x=>auto.includes(x))&&!Array.isArray(p.heads)?null:hs}
   commit('حُفظت إعدادات جدول المراقبات')};
  const sync=()=>{const n=pf.querySelectorAll('[name=room]:checked').length;const c=pf.querySelector('.room-count');if(c)c.textContent=n+' من '+pf.querySelectorAll('[name=room]').length};
@@ -1108,6 +1158,7 @@ const pf=$('#planForm');if(pf){
   commit('استُبعد '+shortName(who)+' من '+ds.length+' يوم'+(Object.keys(p.grid).length?'؛ أعد التوزيع لملء خاناته':''))};
 }
 document.querySelectorAll('[data-away-del]').forEach(b=>b.onclick=()=>{delete plan().away[b.dataset.awayDel];commit('أُلغي الاستثناء')});
+document.querySelectorAll('[data-subjects]').forEach(b=>b.onclick=()=>subjectsDialog(b.dataset.subjects));
 document.querySelectorAll('[data-cal-day]').forEach(b=>b.onclick=()=>{const p=plan(),v=b.dataset.calDay;if(p.dates.includes(v)){p.dates=p.dates.filter(x=>x!==v);delete p.grid[v]}else p.dates.push(v);commit()});
 document.querySelectorAll('[data-cal-nav]').forEach(b=>b.onclick=()=>{const [y,m]=calMonth.split('-').map(Number),d=new Date(y,m-1+Number(b.dataset.calNav),1);calMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');render()});
 document.querySelectorAll('[data-cal-wd]').forEach(b=>b.onclick=()=>{const p=plan(),[y,m]=calMonth.split('-').map(Number),wd=Number(b.dataset.calWd),list=[];for(let d=1;d<=new Date(y,m,0).getDate();d++)if(new Date(y,m-1,d).getDay()===wd)list.push(y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'));const all=list.every(v=>p.dates.includes(v));if(all){p.dates=p.dates.filter(v=>!list.includes(v));list.forEach(v=>delete p.grid[v])}else p.dates=[...new Set([...p.dates,...list])];commit((all?'أُلغيت ':'اختيرت ')+'أيام '+WEEKDAYS[wd]+' في هذا الشهر')});
