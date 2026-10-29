@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>رئاسة القسم الذكية</title>
+<link rel="icon" type="image/png" href="assets/favicon-64.png"><link rel="apple-touch-icon" href="assets/uomosul-logo-192.png"><meta name="theme-color" content="#0f2747">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -316,6 +317,24 @@ tr.day-start td,tr.day-start th{border-top:3px solid var(--line-2)}
 .rank-card small{color:var(--muted);font-size:12px}.rank-est{color:var(--primary)!important;font-weight:600}
 .inv-subs{display:block;font-style:normal;font-size:11px;font-weight:400;margin-top:4px;color:var(--warn)}
 .bars>div{grid-template-columns:200px 1fr 34px}
+.brand{text-align:center}
+.brand-logo{width:92px;height:92px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff,#e9eef7);box-shadow:0 0 0 3px #ffffff33,0 0 0 7px color-mix(in srgb,var(--side-accent) 35%,transparent),0 10px 26px #0006;animation:logo-in .7s cubic-bezier(.2,.8,.2,1.2) both}
+.brand-logo img{width:76px;height:76px;object-fit:contain;transition:transform .5s}
+.brand-logo:hover img{transform:rotate(-8deg) scale(1.06)}
+@keyframes logo-in{from{opacity:0;transform:scale(.6) rotate(-20deg)}to{opacity:1;transform:none}}
+.top-logo{display:none;width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 4px #0002)}
+body.nav-hidden .top-logo{display:block}
+.gate-logo{width:168px;height:168px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff,#eef2f8);box-shadow:0 0 0 6px color-mix(in srgb,#e5b94f 30%,transparent),0 18px 40px #0f274740;animation:logo-in .8s cubic-bezier(.2,.8,.2,1.2) both}
+.gate-logo img{width:150px;height:150px;object-fit:contain}
+.gate-logo.spin{width:124px;height:124px}.gate-logo.spin img{width:110px;height:110px;animation:logo-pulse 1.4s ease-in-out infinite}
+@keyframes logo-pulse{50%{transform:scale(.92);opacity:.75}}
+.gate-uni{color:var(--muted);font-size:13px;margin:0 0 4px}
+.t-hero{position:relative}
+.t-hero-logo{position:absolute;inset-inline-start:-30px;bottom:-40px;width:210px;height:210px;opacity:.1;pointer-events:none;filter:grayscale(1) brightness(3)}
+.t-hero>*:not(.t-hero-logo){position:relative}
+.print-head{display:none}
+@media print{.print-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;border-bottom:2px solid #0f2747;padding-bottom:8px}.print-head img{width:56px;height:56px}.print-head b,.print-head span{display:block}}
+@media (prefers-reduced-motion:reduce){.brand-logo,.gate-logo,.gate-logo img{animation:none!important}}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -366,6 +385,7 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
 @media(max-width:900px){.t-home .grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.t-hero{flex-direction:column;align-items:flex-start;padding:20px}.t-hero h2{font-size:21px}.t-ring{align-self:center}}
 @media(max-width:900px){
+ .top-logo{display:block;width:34px;height:34px}
  .who span{display:none}
  aside{transform:translateX(100%);transition:transform .2s;width:270px;box-shadow:-8px 0 30px rgba(0,0,0,.25)}
  body.nav-open aside{transform:none}
@@ -380,11 +400,11 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
 </style>
 </head>
 <body>
-<aside id="sidebar"><div class="brand"><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
+<aside id="sidebar"><div class="brand"><div class="brand-logo"><img src="assets/uomosul-logo-192.png" alt="شعار جامعة الموصل" width="76" height="76"></div><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
 <div class="overlay" id="overlay"></div>
-<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
+<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><img class="top-logo" src="assets/uomosul-logo-192.png" alt="" width="40" height="40"><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
 <details class="notice" id="notice"><summary id="noticeSummary">نسخة تجريبية: البيانات محفوظة على هذا المتصفح فقط</summary><p id="noticeText">لا تتزامن البيانات بين الأجهزة، فصدّر نسخة احتياطية دورياً. تبديل العرض إلى «تدريسي» للتجربة وليس تسجيل دخول أو صلاحيات آمنة. الملفات المرفقة تُسجّل أسماؤها فقط ولا تُرفع إلى خادم.</p></details>
-<div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
+<div class="print-head"><img src="assets/uomosul-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد</b><span>قسم إدارة الأعمال</span></div></div><div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
 <script src="firebase-config.js"></script>
 <script>
 'use strict';
@@ -570,7 +590,7 @@ function teacherDashboard(){
  const todayName=DAYS[now.getDay()],todayLessons=lessons.filter(s=>s.day===todayName).sort((a,b)=>SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot));
  const total=db.announcements.length,pct=total?Math.round((total-unread.length)/total*100):100;
  const news=[unread.length&&unread.length+' تبليغ جديد',inv.length&&inv.length+' مراقبة قادمة',mine.length&&mine.length+' مهمة مفتوحة'].filter(Boolean);
- const hero='<div class="t-hero"><div class="t-hero-text"><small>'+esc(now.toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long'}))+'</small><h2>'+(now.getHours()<12?'صباح الخير':'مساء الخير')+'، '+esc(me.name||'')+' 👋</h2><p>'+CHEERS[Math.floor(now/864e5)%CHEERS.length]+'</p><span class="t-chip">'+(news.length?'لديك '+news.join(' و'):'كل شيء على ما يرام، لا جديد ينتظرك ☕')+'</span></div>'
+ const hero='<div class="t-hero"><img class="t-hero-logo" src="assets/uomosul-logo.webp" alt="" aria-hidden="true"><div class="t-hero-text"><small>'+esc(now.toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long'}))+'</small><h2>'+(now.getHours()<12?'صباح الخير':'مساء الخير')+'، '+esc(me.name||'')+' 👋</h2><p>'+CHEERS[Math.floor(now/864e5)%CHEERS.length]+'</p><span class="t-chip">'+(news.length?'لديك '+news.join(' و'):'كل شيء على ما يرام، لا جديد ينتظرك ☕')+'</span></div>'
   +'<div class="t-ring" style="--p:'+pct+'" role="img" aria-label="قرأت '+pct+' بالمئة من التبليغات"><div><b>'+pct+'%</b><small>تبليغات مقروءة</small></div></div></div>';
  const cards=[[2,'📢','تبليغات جديدة',unread.length,'t-blue'],[4,'🛡️','مراقباتي القادمة',inv.length,'t-amber'],[5,'📝','مهامي المفتوحة',mine.length,mine.some(overdue)?'t-red':'t-green'],[3,'📚','حصصي الأسبوعية',lessons.length,'t-violet']];
  const tcards='<div class="t-cards">'+cards.map(([p,ic,t,n,c],i)=>'<button class="t-card '+c+'" data-page="'+p+'" style="--d:'+i+'"><span class="t-ic">'+ic+'</span><b>'+n+'</b><small>'+t+'</small></button>').join('')+'</div>';
@@ -1600,8 +1620,8 @@ function gate(state,msg=''){
  const g=$('#gate'),email=esc(cloud.user?.email||'');
  const out='<button class="secondary" data-gate="signout">تسجيل الخروج</button>';
  const html={
-  loading:'<h2>جارٍ التحميل…</h2><p class="muted">الاتصال بقاعدة بيانات القسم.</p>',
-  signin:'<h2>رئاسة القسم الذكية</h2><p>سجّل الدخول بحساب الجامعة <b dir="ltr">@'+esc(DOMAIN)+'</b> للوصول إلى بيانات القسم.</p><button class="google" data-gate="signin"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>الدخول بحساب Google الجامعي</button>',
+  loading:'<div class="gate-logo spin"><img src="assets/uomosul-logo.webp" alt="" width="110" height="110"></div><h2>جارٍ التحميل…</h2><p class="muted">الاتصال بقاعدة بيانات القسم.</p>',
+  signin:'<div class="gate-logo"><img src="assets/uomosul-logo.webp" alt="شعار جامعة الموصل" width="150" height="150"></div><p class="gate-uni">جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</p><h2>رئاسة القسم الذكية</h2><p>سجّل الدخول بحساب الجامعة <b dir="ltr">@'+esc(DOMAIN)+'</b> للوصول إلى بيانات القسم.</p><button class="google" data-gate="signin"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>الدخول بحساب Google الجامعي</button>',
   domain:'<h2>هذا الحساب غير مسموح</h2><p>سجّلت الدخول بـ <b dir="ltr">'+email+'</b>. يُسمح فقط بحسابات <b dir="ltr">@'+esc(DOMAIN)+'</b>.</p>'+out,
   bootstrap:'<h2>إعداد أول مرة</h2><p>لا يوجد رئيس قسم معتمد في قاعدة البيانات بعد.</p><p>اعتماد الحساب <b dir="ltr">'+email+'</b> رئيساً للقسم يمنحه صلاحية الإضافة والتعديل، ويمكنه لاحقاً إضافة مشرفين آخرين.</p><div class="tools" style="justify-content:center"><button data-gate="claim">اعتماد حسابي رئيساً للقسم</button>'+out+'</div>',
   denied:'<h2>تعذر الوصول إلى البيانات</h2><p>رفضت قاعدة البيانات الطلب للحساب <b dir="ltr">'+email+'</b>. تأكد من نشر قواعد الحماية (firestore.rules) ومن أن الحساب جامعي موثّق.</p>'+out,
