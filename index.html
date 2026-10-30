@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>رئاسة القسم الذكية</title>
-<link rel="icon" type="image/png" href="assets/favicon-64.png"><link rel="apple-touch-icon" href="assets/uomosul-logo-192.png"><meta name="theme-color" content="#0f2747">
+<link rel="icon" type="image/png" href="assets/favicon-64.png"><link rel="apple-touch-icon" href="assets/college-logo-192.png"><meta name="theme-color" content="#0f2747">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -370,6 +370,41 @@ body.nav-hidden .top-logo{display:block}
  .rr-idle{font-size:11px;line-height:1.8}
  .rr-sign{display:flex;justify-content:space-between;margin-top:28px;font-size:12px}
 }
+.letters .section,.letters section{overflow:visible}
+.l-tpls{align-items:center;margin-bottom:10px}
+.l-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.l-form .full{grid-column:1/-1}
+.l-cfg{margin-top:12px}.l-cfg summary{cursor:pointer;font-weight:600}
+.l-preview{overflow:auto;background:#cfd6e3;border-radius:14px;padding:18px;display:flex;justify-content:center}
+.letter-page{position:relative;width:210mm;min-height:297mm;box-sizing:border-box;padding:16mm 18mm 22mm;background:#fff;color:#111;font-size:14.5px;line-height:1.9;box-shadow:0 8px 30px #0003;overflow:hidden;text-align:right}
+.l-wm{position:absolute;top:50%;left:50%;width:120mm;transform:translate(-50%,-45%);opacity:.06;pointer-events:none}
+.lh{display:grid;grid-template-columns:1fr 34mm 1fr;align-items:center;gap:6mm;position:relative}
+.lh-r{font-size:13.5px;line-height:1.75;font-weight:600;color:#1f2f6e}
+.lh-r b{color:#7b2fb0}
+.lh-c{display:grid;place-items:center}.lh-c img{width:32mm;height:32mm;object-fit:contain}
+.lh-l{display:grid;gap:2px;justify-items:end;font-size:13px;text-align:left;direction:rtl}
+.lh-l span{white-space:nowrap}
+.lh-rule{height:5px;margin:4mm 0 7mm;border-top:2.5px solid #2b3f8f;border-bottom:1.5px solid #8a3fb8}
+.l-to,.l-sub{margin:2mm 0;font-size:15px}
+.l-sub{text-align:center;margin:4mm 0 5mm}.l-sub b{text-decoration:underline;text-underline-offset:5px}
+.l-greet{margin:0 0 2mm}
+.l-body p{margin:0 0 2.5mm;text-align:justify;text-indent:10mm}
+.l-ph{color:#999}
+.l-close{margin:4mm 0 0}
+.l-sign{display:grid;justify-items:center;width:65mm;margin:14mm 0 0 0;margin-inline-start:auto;text-align:center;line-height:1.7}
+.l-sign b{font-size:15px}.l-sign span{font-size:13px}
+.l-att,.l-cc{font-size:12.5px;margin-top:6mm}
+.l-cc ul{margin:1mm 0 0;padding-inline-start:6mm}
+.l-foot{position:absolute;bottom:9mm;left:18mm;right:18mm;border-top:1px solid #8a3fb8;padding-top:2mm;text-align:center;font-size:11px;color:#555}
+@media(max-width:700px){.l-form{grid-template-columns:1fr}}
+@media print{
+ @page{size:A4;margin:0}
+ body.print-letter main>*:not(#view),body.print-letter #view>*:not(.letters),body.print-letter .letters>section:not(:has(.l-preview)),body.print-letter .letters>section>h2,body.print-letter .top-logo,body.print-letter .print-head{display:none!important}
+ body.print-letter main{margin:0!important;padding:0!important;max-width:none}
+ body.print-letter .letters>section{padding:0;border:0;box-shadow:none;background:none;margin:0}
+ body.print-letter .l-preview{padding:0;background:none;overflow:visible;display:block}
+ body.print-letter .letter-page{box-shadow:none;margin:0;width:210mm;min-height:297mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -435,17 +470,17 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
 </style>
 </head>
 <body>
-<aside id="sidebar"><div class="brand"><div class="brand-logo"><img src="assets/uomosul-logo-192.png" alt="شعار جامعة الموصل" width="76" height="76"></div><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
+<aside id="sidebar"><div class="brand"><div class="brand-logo"><img src="assets/college-logo-192.png" alt="شعار كلية الإدارة والاقتصاد" width="76" height="76"></div><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
 <div class="overlay" id="overlay"></div>
-<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><img class="top-logo" src="assets/uomosul-logo-192.png" alt="" width="40" height="40"><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
+<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><img class="top-logo" src="assets/college-logo-192.png" alt="" width="40" height="40"><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
 <details class="notice" id="notice"><summary id="noticeSummary">نسخة تجريبية: البيانات محفوظة على هذا المتصفح فقط</summary><p id="noticeText">لا تتزامن البيانات بين الأجهزة، فصدّر نسخة احتياطية دورياً. تبديل العرض إلى «تدريسي» للتجربة وليس تسجيل دخول أو صلاحيات آمنة. الملفات المرفقة تُسجّل أسماؤها فقط ولا تُرفع إلى خادم.</p></details>
-<div class="print-head"><img src="assets/uomosul-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد</b><span>قسم إدارة الأعمال</span></div></div><div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
+<div class="print-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد</b><span>قسم إدارة الأعمال</span></div></div><div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
 <script src="firebase-config.js"></script>
 <script>
 'use strict';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','النسخ الاحتياطي','الإدارة واستيراد Excel','العبء التدريسي','البحث الأكاديمي'];
-const navGroups=[['الرئيسية',[0]],['الكادر',[1,6]],['التدريس',[3,4,10]],['البحث العلمي',[11]],['التواصل والمتابعة',[2,5,7]],['البيانات',[9,8]]];
+const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','النسخ الاحتياطي','الإدارة واستيراد Excel','العبء التدريسي','البحث الأكاديمي','الكتب الإدارية'];
+const navGroups=[['الرئيسية',[0]],['الكادر',[1,6]],['التدريس',[3,4,10]],['البحث العلمي',[11]],['التواصل والمتابعة',[2,12,5,7]],['البيانات',[9,8]]];
 const key='smart-department-v1';
 const initial={teachers:[],announcements:[],courses:[],schedule:[],invigilation:[],tasks:[],committees:[],polls:[],research:[]};
 let db;try{db=JSON.parse(localStorage.getItem(key))||structuredClone(initial)}catch{db=structuredClone(initial)}
@@ -626,7 +661,7 @@ function teacherDashboard(){
  const todayName=DAYS[now.getDay()],todayLessons=lessons.filter(s=>s.day===todayName).sort((a,b)=>SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot));
  const total=db.announcements.length,pct=total?Math.round((total-unread.length)/total*100):100;
  const news=[unread.length&&unread.length+' تبليغ جديد',inv.length&&inv.length+' مراقبة قادمة',mine.length&&mine.length+' مهمة مفتوحة'].filter(Boolean);
- const hero='<div class="t-hero"><img class="t-hero-logo" src="assets/uomosul-logo.webp" alt="" aria-hidden="true"><div class="t-hero-text"><small>'+esc(now.toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long'}))+'</small><h2>'+(now.getHours()<12?'صباح الخير':'مساء الخير')+'، '+esc(me.name||'')+' 👋</h2><p>'+CHEERS[Math.floor(now/864e5)%CHEERS.length]+'</p><span class="t-chip">'+(news.length?'لديك '+news.join(' و'):'كل شيء على ما يرام، لا جديد ينتظرك ☕')+'</span></div>'
+ const hero='<div class="t-hero"><img class="t-hero-logo" src="assets/college-logo.webp" alt="" aria-hidden="true"><div class="t-hero-text"><small>'+esc(now.toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long'}))+'</small><h2>'+(now.getHours()<12?'صباح الخير':'مساء الخير')+'، '+esc(me.name||'')+' 👋</h2><p>'+CHEERS[Math.floor(now/864e5)%CHEERS.length]+'</p><span class="t-chip">'+(news.length?'لديك '+news.join(' و'):'كل شيء على ما يرام، لا جديد ينتظرك ☕')+'</span></div>'
   +'<div class="t-ring" style="--p:'+pct+'" role="img" aria-label="قرأت '+pct+' بالمئة من التبليغات"><div><b>'+pct+'%</b><small>تبليغات مقروءة</small></div></div></div>';
  const cards=[[2,'📢','تبليغات جديدة',unread.length,'t-blue'],[4,'🛡️','مراقباتي القادمة',inv.length,'t-amber'],[5,'📝','مهامي المفتوحة',mine.length,mine.some(overdue)?'t-red':'t-green'],[3,'📚','حصصي الأسبوعية',lessons.length,'t-violet']];
  const tcards='<div class="t-cards">'+cards.map(([p,ic,t,n,c],i)=>'<button class="t-card '+c+'" data-page="'+p+'" style="--d:'+i+'"><span class="t-ic">'+ic+'</span><b>'+n+'</b><small>'+t+'</small></button>').join('')+'</div>';
@@ -1192,7 +1227,7 @@ function researchView(){
 function researchReport(list,st,admin){
  const t=(head,rows)=>'<table class="rr-t"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
  const per=Object.entries(st.per).sort((a,b)=>b[1].n-a[1].n);
- return '<div class="rr-head"><img src="assets/uomosul-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>'+(admin?'الإحصائية البحثية للقسم':'البحوث المنشورة — '+esc(name(person)))+'</h2><span>الفلتر: '+esc(filterLabel())+' · تاريخ الإعداد: '+today()+'</span></div></div>'
+ return '<div class="rr-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>'+(admin?'الإحصائية البحثية للقسم':'البحوث المنشورة — '+esc(name(person)))+'</h2><span>الفلتر: '+esc(filterLabel())+' · تاريخ الإعداد: '+today()+'</span></div></div>'
   +'<h3>المؤشرات</h3>'+t(['مجموع البحوث','Scopus','Clarivate','عالمية','محلية','Q1 و Q2','مقبولة للنشر'].concat(admin?['باحثون نشطون','نسبة النشر العالمي']:[]),[[st.total,st.scopus,st.clarivate,st.intl,st.local,st.q12,st.accepted].concat(admin?[st.active+' من '+st.staff,st.total?Math.round(st.intl/st.total*100)+'%':'—']:[])])
   +'<h3>التوزيع حسب التصنيف</h3>'+t(['التصنيف','العدد'],st.byIndex.map(x=>[esc(x[0]),x[1]]))
   +(admin&&per.length?'<h3>البحوث حسب التدريسي</h3>'+t(['ت','التدريسي','المجموع','Scopus','Clarivate','عالمي','محلي','Q1–Q2'],per.map(([id,o],i)=>[i+1,esc(name(id)),'<b>'+o.n+'</b>',o.scopus,o.clarivate,o.intl,o.local,o.q12])):'')
@@ -1211,6 +1246,71 @@ function researchExport(){
   s3['!cols']=[{wch:32},{wch:9},{wch:9},{wch:10},{wch:9},{wch:9},{wch:9}];X.utils.book_append_sheet(wb,s3,'حسب التدريسي');
   X.writeFile(wb,'الإحصائية-البحثية-'+today()+'.xlsx');
  }).catch(e=>toast('تعذر التصدير: '+e.message));
+}
+// ---------------------------------------------------------------- الكتب الإدارية: كتاب رسمي بترويسة الكلية، معاينة A4 حية، ترقيم تلقائي وأرشيف
+const L_TEMPLATES={
+ 'شكر وتقدير':{subject:'شكر وتقدير',body:'نظراً للجهود المتميزة التي بذلتموها في … ، والتي كان لها الأثر الطيب في سير العمل في القسم، يسرّنا أن نتقدم إليكم بالشكر والتقدير، متمنين لكم دوام التوفيق والنجاح.'},
+ 'تكليف':{subject:'تكليف',body:'تقرر تكليفكم بـ … اعتباراً من تاريخ … ، على أن تُنجز المهمة خلال مدة أقصاها … ، وإعلام القسم بما يتم إنجازه.'},
+ 'دعوة اجتماع':{subject:'دعوة لاجتماع مجلس القسم',body:'ندعوكم لحضور اجتماع مجلس القسم المقرر عقده يوم … الموافق … في الساعة … في قاعة … ، لمناقشة المواضيع الآتية:\n1. …\n2. …'},
+ 'تبليغ':{subject:'تبليغ',body:'نود إعلامكم بـ … ، يرجى الاطلاع والعمل بموجبه.'},
+ 'طلب':{subject:'طلب',body:'يرجى التفضل بالموافقة على … ، وذلك لـ … .'},
+ 'إشعار':{subject:'إشعار',body:'نشعركم بأن … .'}
+};
+const L_TO=['عمادة كلية الإدارة والاقتصاد','السيد عميد الكلية المحترم','السيد معاون العميد للشؤون العلمية المحترم','السيد معاون العميد للشؤون الإدارية المحترم','شعبة الدراسات والتخطيط','شعبة التسجيل وشؤون الطلبة','شعبة الموارد البشرية','السادة التدريسيين في القسم المحترمين','رئاسة جامعة الموصل'];
+const lcfg=()=>db.letterCfg||(db.letterCfg={prefix:'ق.إ.أ',signName:'',signTitle:'رئيس قسم إدارة الأعمال',contact:'كلية الإدارة والاقتصاد · جامعة الموصل'});
+const hijri=d=>{try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00'))}catch{return ''}};
+const fmtDate=d=>d?d.split('-').reverse().join('/'):'';
+function nextLetterNo(){const y=today().slice(0,4),nums=(db.letters||[]).filter(l=>String(l.date).startsWith(y)).map(l=>parseInt(String(l.no).split('/').pop())||0);return (nums.length?Math.max(...nums):0)+1}
+let letterDraft=null;
+function newDraft(){const c=lcfg();return {id:'',no:lcfg().prefix+'/'+nextLetterNo(),date:today(),to:'',subject:'',greet:'تحية طيبة …',body:'',close:'مع التقدير.',signName:c.signName,signTitle:c.signTitle,attach:'',cc:'',showHijri:true}}
+function letterHTML(L){
+ const paras=String(L.body||'').split(/\n+/).filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')||'<p class="l-ph">نص الكتاب…</p>',cc=String(L.cc||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ return '<div class="letter-page"><img class="l-wm" src="assets/college-logo.webp" alt="">'
+  +'<header class="lh"><div class="lh-r">جمهورية العراق<br>وزارة التعليم العالي والبحث العلمي<br>جامعة الموصل<br>كلية الإدارة والاقتصاد<br><b>قسم إدارة الأعمال</b></div>'
+  +'<div class="lh-c"><img src="assets/college-logo.webp" alt="شعار كلية الإدارة والاقتصاد"></div>'
+  +'<div class="lh-l"><span>العدد: <b>'+esc(L.no||'')+'</b></span><span>التاريخ: <b>'+esc(fmtDate(L.date))+' م</b></span>'+(L.showHijri&&L.date?'<span>الموافق: '+esc(hijri(L.date))+'</span>':'')+'</div></header><div class="lh-rule"></div>'
+  +'<p class="l-to">إلى / <b>'+esc(L.to||'…')+'</b></p><p class="l-sub">م / <b>'+esc(L.subject||'…')+'</b></p>'
+  +(L.greet?'<p class="l-greet">'+esc(L.greet)+'</p>':'')+'<div class="l-body">'+paras+'</div>'+(L.close?'<p class="l-close">'+esc(L.close)+'</p>':'')
+  +'<div class="l-sign"><b>'+esc(L.signName||'…………………')+'</b><span>'+esc(L.signTitle||'')+'</span><span>'+esc(fmtDate(L.date))+'</span></div>'
+  +(L.attach?'<p class="l-att"><b>المرفقات:</b> '+esc(L.attach)+'</p>':'')
+  +(cc.length?'<div class="l-cc"><b>نسخة منه إلى:</b><ul>'+cc.map(x=>'<li>'+esc(x)+'</li>').join('')+'<li>الصادرة</li></ul></div>':'')
+  +'<footer class="l-foot">'+esc(lcfg().contact||'')+'</footer></div>';
+}
+function lettersView(){
+ if(!letterDraft)letterDraft=newDraft();
+ const L=letterDraft,c=lcfg(),list=(db.letters||[]).slice().sort((a,b)=>String(b.date).localeCompare(a.date)||String(b.no).localeCompare(a.no,'en',{numeric:true}));
+ const f=(n,label,val,type='text',extra='')=>'<label>'+label+'<input name="'+n+'" type="'+type+'" value="'+esc(val||'')+'" '+extra+'></label>';
+ return '<div class="letters">'
+  +section(L.id?'✏️ تعديل كتاب محفوظ':'📝 كتاب جديد','<div class="chips l-tpls"><span class="muted">قوالب جاهزة:</span>'+Object.keys(L_TEMPLATES).map(k=>'<button type="button" class="btn-sm secondary" data-ltpl="'+esc(k)+'">'+esc(k)+'</button>').join('')+'</div>'
+   +'<form id="letterForm" class="l-form">'+f('no','العدد',L.no)+f('date','التاريخ',L.date,'date')
+   +'<label class="full">إلى<input name="to" list="lToList" value="'+esc(L.to)+'" placeholder="الجهة المرسل إليها"><datalist id="lToList">'+L_TO.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist></label>'
+   +'<label class="full">الموضوع (م/)<input name="subject" value="'+esc(L.subject)+'"></label>'
+   +f('greet','التحية',L.greet)+f('close','الختام',L.close)
+   +'<label class="full">نص الكتاب<textarea name="body" rows="7" placeholder="اكتب نص الكتاب؛ كل سطر جديد فقرة">'+esc(L.body)+'</textarea></label>'
+   +f('signName','اسم الموقّع',L.signName)+f('signTitle','صفة الموقّع',L.signTitle)
+   +'<label class="full">المرفقات (اختياري)<input name="attach" value="'+esc(L.attach)+'"></label>'
+   +'<label class="full">نسخة منه إلى (كل جهة في سطر)<textarea name="cc" rows="3">'+esc(L.cc)+'</textarea></label>'
+   +'<label class="chip"><input type="checkbox" name="showHijri"'+(L.showHijri?' checked':'')+'>إظهار التاريخ الهجري</label>'
+   +'<div class="form-actions full"><button type="button" data-lsave>💾 حفظ في الأرشيف</button><button type="button" class="secondary" data-lprint>🖨️ طباعة / PDF</button><button type="button" class="secondary" data-lnew>كتاب جديد</button></div></form>'
+   +'<details class="l-cfg"><summary>⚙️ إعدادات الكتب: رمز الترقيم، الموقّع، تذييل الصفحة</summary><form id="letterCfg" class="l-form">'+f('prefix','رمز العدد',c.prefix)+f('signName','اسم رئيس القسم (افتراضي)',c.signName)+f('signTitle','الصفة (افتراضية)',c.signTitle)+'<label class="full">تذييل الصفحة<input name="contact" value="'+esc(c.contact)+'" placeholder="العنوان، البريد الإلكتروني، الهاتف"></label><div class="form-actions full"><button>حفظ الإعدادات</button></div></form></details>')
+  +section('👁️ معاينة الكتاب (A4)','<div class="l-preview" id="letterPreview">'+letterHTML(L)+'</div>')
+  +section('🗂️ أرشيف الكتب ('+list.length+')',list.length?table(['العدد','التاريخ','الموضوع','إلى',''],list.map(l=>[esc(l.no),esc(fmtDate(l.date)),esc(l.subject||'—'),esc(l.to||'—'),'<span class="row-actions"><button class="btn-sm secondary" data-lopen="'+l.id+'">فتح</button><button class="btn-sm secondary" data-lcopy="'+l.id+'">نسخة جديدة</button><button class="btn-sm ghost-danger" data-ldel="'+l.id+'">حذف</button></span>'])):'<p class="empty">لا توجد كتب محفوظة بعد.</p>')
+  +'</div>';
+}
+function bindLetters(){
+ const fm=$('#letterForm');if(!fm)return;
+ const read=()=>{const d=new FormData(fm);['no','date','to','subject','greet','close','body','signName','signTitle','attach','cc'].forEach(k=>letterDraft[k]=String(d.get(k)??''));letterDraft.showHijri=!!d.get('showHijri');$('#letterPreview').innerHTML=letterHTML(letterDraft)};
+ fm.addEventListener('input',read);fm.addEventListener('change',read);
+ document.querySelectorAll('[data-ltpl]').forEach(b=>b.onclick=()=>{read();const t=L_TEMPLATES[b.dataset.ltpl];if(letterDraft.body&&!confirm('استبدال نص الكتاب الحالي بالقالب؟'))return;Object.assign(letterDraft,t);render()});
+ fm.querySelector('[data-lnew]').onclick=()=>{letterDraft=newDraft();render()};
+ fm.querySelector('[data-lsave]').onclick=()=>{read();if(!letterDraft.subject.trim())return toast('اكتب موضوع الكتاب');db.letters=db.letters||[];
+  if(letterDraft.id){const i=db.letters.findIndex(l=>l.id===letterDraft.id);db.letters[i]={...letterDraft}}else{if(db.letters.some(l=>l.no===letterDraft.no))return toast('العدد '+letterDraft.no+' مستعمل؛ غيّره');letterDraft.id=uid();db.letters.push({...letterDraft,createdAt:Date.now()})}
+  commit('حُفظ الكتاب '+letterDraft.no+' في الأرشيف')};
+ fm.querySelector('[data-lprint]').onclick=()=>{read();document.body.classList.add('print-letter');const done=()=>{document.body.classList.remove('print-letter');removeEventListener('afterprint',done)};addEventListener('afterprint',done);print();setTimeout(done,1500)};
+ const cf=$('#letterCfg');if(cf)cf.onsubmit=e=>{e.preventDefault();const d=new FormData(cf);db.letterCfg={prefix:String(d.get('prefix')).trim()||'ق.إ.أ',signName:String(d.get('signName')).trim(),signTitle:String(d.get('signTitle')).trim(),contact:String(d.get('contact')).trim()};if(!letterDraft.id){letterDraft.signName=db.letterCfg.signName;letterDraft.signTitle=db.letterCfg.signTitle;letterDraft.no=db.letterCfg.prefix+'/'+nextLetterNo()}commit('حُفظت إعدادات الكتب')};
+ document.querySelectorAll('[data-lopen]').forEach(b=>b.onclick=()=>{letterDraft={...db.letters.find(l=>l.id===b.dataset.lopen)};render();scrollTo(0,0)});
+ document.querySelectorAll('[data-lcopy]').forEach(b=>b.onclick=()=>{const l=db.letters.find(x=>x.id===b.dataset.lcopy);letterDraft={...l,id:'',no:lcfg().prefix+'/'+nextLetterNo(),date:today()};render();scrollTo(0,0);toast('نسخة جديدة بعدد '+letterDraft.no)});
+ document.querySelectorAll('[data-ldel]').forEach(b=>b.onclick=()=>{if(!confirm('حذف الكتاب من الأرشيف؟'))return;db.letters=db.letters.filter(l=>l.id!==b.dataset.ldel);if(letterDraft?.id===b.dataset.ldel)letterDraft=null;commit('حُذف الكتاب')});
 }
 function invigilationView(){
  const admin=isAdmin(),mine=person?dutiesOf(person).filter(x=>x.date>=today()):[];
@@ -1278,7 +1378,7 @@ if(!isAdmin()&&!TEACHER_PAGES.includes(page))page=0;
 updateWho();
 $('#nav').innerHTML=navGroups.map(([g,ix])=>[g,ix.filter(i=>isAdmin()||TEACHER_PAGES.includes(i))]).filter(([,ix])=>ix.length).map(([g,ix])=>'<div class="nav-group"><span>'+g+'</span>'+ix.map(i=>'<button data-page="'+i+'"'+(page===i?' class="active" aria-current="page"':'')+'>'+pages[i]+'</button>').join('')+'</div>').join('');
 $('#title').textContent=pages[page];document.title=pages[page]+' · رئاسة القسم الذكية';
-const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,()=>adminsSection()+adminView(),workloadView,researchView];
+const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,()=>adminsSection()+adminView(),workloadView,researchView,lettersView];
 $('#view').innerHTML=(viewAs?'<div class="alert ok preview-bar"><span>👁️ '+(viewAs===ownTeacher()?'تشاهد النظام بصفتك تدريسياً':'تشاهد النظام كما يراه: <b>'+esc(name(viewAs))+'</b> · معاينة فقط')+'</span><button data-action="exitView">العودة إلى رئيس القسم</button></div>':'')+views[page]();
 if(page===9)bindAdmin();
 if(page===10)bindWorkload();
@@ -1358,6 +1458,7 @@ const rff=$('#rFilter');if(rff){
   render()});
 }
 document.querySelectorAll('[data-r-export]').forEach(b=>b.onclick=researchExport);
+bindLetters();
 document.querySelectorAll('[data-r-print]').forEach(b=>b.onclick=()=>{document.body.classList.add('print-research');const done=()=>{document.body.classList.remove('print-research');removeEventListener('afterprint',done)};addEventListener('afterprint',done);print();setTimeout(done,1500)});
 document.querySelectorAll('[data-subjects]').forEach(b=>b.onclick=()=>subjectsDialog(b.dataset.subjects));
 document.querySelectorAll('[data-cal-day]').forEach(b=>b.onclick=()=>{const p=plan(),v=b.dataset.calDay;if(p.dates.includes(v)){p.dates=p.dates.filter(x=>x!==v);delete p.grid[v]}else p.dates.push(v);commit()});
@@ -1679,7 +1780,7 @@ function cloudView(){
  m.answers=new Map(db.polls.flatMap(p=>(p.answers||[]).map(x=>[p.id+'_'+x.teacher,{id:p.id+'_'+x.teacher,poll:p.id,teacher:x.teacher,answer:x.answer}])));
  // البحوث تُحفظ في مجموعة answers التي تسمح القواعد المنشورة لكل تدريسي بالكتابة فيها لسجلاته فقط
  (db.research||[]).filter(r=>r.teacher&&(cloud.admin?!r.deleted:true)).forEach(r=>{const {id,teacher,createdAt,deleted,...data}=r,key='R'+id+'_'+teacher;m.answers.set(key,{id:key,poll:'R'+id,teacher,kind:'research',createdAt:createdAt??null,deleted:!!deleted,data})});
- m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},ttTerm:db.ttTerm||1,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
+ m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},ttTerm:db.ttTerm||1,letters:db.letters||[],letterCfg:db.letterCfg||null,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
  return m;
 }
 let pushQueued=false;
@@ -1710,7 +1811,7 @@ function applyRemote(force){
  next.announcements.forEach(a=>a.read=reads.filter(r=>r.ann===a.id).map(r=>r.teacher));
  next.polls.forEach(p=>p.answers=answers.filter(r=>r.poll===p.id).map(r=>({teacher:r.teacher,answer:r.answer})));
  next.research=answers.filter(r=>r.kind==='research'&&!r.deleted).map(r=>({...(r.data||{}),id:String(r.poll).slice(1),teacher:r.teacher,createdAt:r.createdAt}));
- next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.ttTerm=meta.ttTerm||1;next.scheduleStale=!!meta.scheduleStale;
+ next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.ttTerm=meta.ttTerm||1;next.letters=meta.letters||[];next.letterCfg=meta.letterCfg||null;next.scheduleStale=!!meta.scheduleStale;
  next.workloadMeta=meta.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};
  next.workloads=g('workloads');
  db=next;updateIdentity();
@@ -1770,8 +1871,8 @@ function gate(state,msg=''){
  const g=$('#gate'),email=esc(cloud.user?.email||'');
  const out='<button class="secondary" data-gate="signout">تسجيل الخروج</button>';
  const html={
-  loading:'<div class="gate-logo spin"><img src="assets/uomosul-logo.webp" alt="" width="110" height="110"></div><h2>جارٍ التحميل…</h2><p class="muted">الاتصال بقاعدة بيانات القسم.</p>',
-  signin:'<div class="gate-logo"><img src="assets/uomosul-logo.webp" alt="شعار جامعة الموصل" width="150" height="150"></div><p class="gate-uni">جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</p><h2>رئاسة القسم الذكية</h2><p>سجّل الدخول بحساب الجامعة <b dir="ltr">@'+esc(DOMAIN)+'</b> للوصول إلى بيانات القسم.</p><button class="google" data-gate="signin"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>الدخول بحساب Google الجامعي</button>',
+  loading:'<div class="gate-logo spin"><img src="assets/college-logo.webp" alt="" width="110" height="110"></div><h2>جارٍ التحميل…</h2><p class="muted">الاتصال بقاعدة بيانات القسم.</p>',
+  signin:'<div class="gate-logo"><img src="assets/college-logo.webp" alt="شعار كلية الإدارة والاقتصاد" width="150" height="150"></div><p class="gate-uni">جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</p><h2>رئاسة القسم الذكية</h2><p>سجّل الدخول بحساب الجامعة <b dir="ltr">@'+esc(DOMAIN)+'</b> للوصول إلى بيانات القسم.</p><button class="google" data-gate="signin"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>الدخول بحساب Google الجامعي</button>',
   domain:'<h2>هذا الحساب غير مسموح</h2><p>سجّلت الدخول بـ <b dir="ltr">'+email+'</b>. يُسمح فقط بحسابات <b dir="ltr">@'+esc(DOMAIN)+'</b>.</p>'+out,
   bootstrap:'<h2>إعداد أول مرة</h2><p>لا يوجد رئيس قسم معتمد في قاعدة البيانات بعد.</p><p>اعتماد الحساب <b dir="ltr">'+email+'</b> رئيساً للقسم يمنحه صلاحية الإضافة والتعديل، ويمكنه لاحقاً إضافة مشرفين آخرين.</p><div class="tools" style="justify-content:center"><button data-gate="claim">اعتماد حسابي رئيساً للقسم</button>'+out+'</div>',
   denied:'<h2>تعذر الوصول إلى البيانات</h2><p>رفضت قاعدة البيانات الطلب للحساب <b dir="ltr">'+email+'</b>. تأكد من نشر قواعد الحماية (firestore.rules) ومن أن الحساب جامعي موثّق.</p>'+out,
