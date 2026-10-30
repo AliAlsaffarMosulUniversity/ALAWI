@@ -1,6 +1,6 @@
 // عامل الخدمة: يجعل التطبيق قابلاً للتثبيت على الهاتف ويفتح دون إنترنت، ويعرض الإشعارات.
 // صفحات التطبيق تُجلب من الشبكة أولاً (لتصل التحديثات فوراً) ومن النسخة المخزنة عند انقطاع الاتصال.
-const CACHE = 'alawi-v1';
+const CACHE = 'alawi-v2';
 const SHELL = ['./', 'index.html', 'firebase-config.js', 'manifest.webmanifest', 'assets/college-logo-192.png', 'assets/college-logo.webp', 'assets/favicon-64.png', 'assets/icon-192.png'];
 
 self.addEventListener('install', e => {
@@ -20,7 +20,7 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)) } return res })));
     return;
   }
-  e.respondWith(fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)) } return res })
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)) } return res })
     .catch(() => caches.match(req).then(hit => hit || (req.mode === 'navigate' ? caches.match('index.html') : Response.error()))));
 });
 self.addEventListener('notificationclick', e => {
