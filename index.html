@@ -892,7 +892,7 @@ function smartPanel(st,n){
  return '<details class="smart-panel"'+(P.courses.length?'':' open')+'><summary>🧠 الجدول الذكي — خطة تدريس '+stageName(n)+' ('+P.courses.length+' مادة · '+total+' ساعة لكل شعبة)</summary>'
   +'<form id="smartForm" data-st="'+st+'" data-n="'+n+'"><p class="muted">حدّد المواد وساعاتها الأسبوعية وتدريسي كل شعبة وقاعتها، ثم اضغط «إنشاء الجدول». يضع النظام المحاضرات بساعتين متتاليتين، ويمنع تعارض التدريسي والقاعة مع كل المراحل والدراستين، ويوزّع ساعات كل شعبة على أيام الأسبوع.</p>'
   +'<div class="smart-row"><span class="muted">أيام الدوام:</span><div class="chips">'+DAYS.map(d=>'<label class="chip"><input type="checkbox" name="day" value="'+d+'"'+(P.days.includes(d)?' checked':'')+'>'+d+'</label>').join('')+'</div></div>'
-  +'<div class="smart-row"><span class="muted">قاعة كل شعبة:</span>'+secs.map(sec=>'<label class="room-in">'+sec+'<input name="room-'+sec+'" value="'+esc(P.rooms[sec]||'')+'" placeholder="مثل 3201"></label>').join('')+'</div>'
+  +'<div class="smart-row"><span class="muted">قاعة كل شعبة:</span>'+secs.map(sec=>'<label class="room-in">'+sec+'<input name="room-'+sec+'" list="deptRooms" value="'+esc(P.rooms[sec]||'')+'" placeholder="مثل 3201"></label>').join('')+'<datalist id="deptRooms">'+knownRooms().map(r=>'<option value="'+esc(r)+'">').join('')+'</datalist></div>'
   +'<div class="scroll"><table class="smart-table"><thead><tr><th>المادة</th><th>ساعات/أسبوع</th>'+secs.map(sec=>'<th>تدريسي الشعبة '+sec+'</th>').join('')+'<th></th></tr></thead><tbody>'
   +P.courses.map((c,i)=>'<tr><td><input data-pn="'+i+'" value="'+esc(c.name)+'"></td><td><input data-ph="'+i+'" type="number" min="1" max="12" value="'+esc(c.hours)+'"></td>'+secs.map(sec=>'<td>'+sel(sec,c.teachers?.[sec]||'',i)+'</td>').join('')+'<td><button type="button" class="chip-x" data-pdel="'+i+'" aria-label="حذف المادة">×</button></td></tr>').join('')
   +'</tbody></table></div>'
@@ -913,7 +913,7 @@ function generateStage(st,n){
  const others=db.schedule.filter(x=>SLOTS.includes(x.slot)&&!(studyOf(x)===st&&x.stage===n));
  const tDays=id=>{const d=teacherDays(db.teachers.find(t=>t.id===id));return d.length?d:DAYS};
  // القاعات البديلة: كل قاعات القسم المعروفة، تُستعمل فقط إذا كانت قاعة الشعبة مشغولة (كما يحدث في جداول القسم)
- const roomPool=[...new Set([...sched().map(x=>x.room),...Object.values(db.ttPlans||{}).flatMap(q=>Object.values(q.rooms||{}))].filter(Boolean))];
+ const roomPool=knownRooms();
  const blocks=[];for(const sec of secs)for(const c of P.courses){let h=Number(c.hours)||0;const t=c.teachers?.[sec]||'';while(h>0){const len=h>=2?2:1;blocks.push({sec,c,t,len});h-=len}}
  const load={};blocks.forEach(b=>{if(b.t)load[b.t]=(load[b.t]||0)+b.len});
  const freeDays=x=>x.t?tDays(x.t).length:9;
@@ -1078,8 +1078,11 @@ async function ttImport(file){
 let planOpen=false;
 const WEEKDAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const dayOfDate=d=>WEEKDAYS[new Date(d+'T00:00').getDay()];
-const defaultPlan=()=>({title:'جدول المراقبات الامتحانية',rooms:['3202','3203','3205','3206','3208','3209','3409','2406','2408','2409'],dates:[],perRoom:3,reserves:2,exclude:[],heads:null,away:{},grid:{}});
-const plan=()=>db.examPlan||(db.examPlan=defaultPlan());
+// قاعات القسم المعتمدة (البناية 3: 3201–3211، والبناية 2: 2406 و2408 و2409)، ويمكن إضافة قاعة أخرى من إعدادات المراقبات
+const DEPT_ROOMS=['3201','3202','3203','3204','3205','3206','3207','3208','3209','3210','3211','2406','2408','2409'];
+const deptRoom=(r,p)=>[...DEPT_ROOMS,...(p?.extraRooms||[])].some(x=>roomKey(x)===roomKey(r));
+const defaultPlan=()=>({title:'جدول المراقبات الامتحانية',rooms:[...DEPT_ROOMS],dates:[],perRoom:3,reserves:2,exclude:[],heads:null,away:{},grid:{}});
+const plan=()=>{const p=db.examPlan||(db.examPlan=defaultPlan());if(p.rooms.some(r=>!deptRoom(r,p)))p.rooms=p.rooms.filter(r=>deptRoom(r,p));return p};
 const poolIds=()=>db.teachers.filter(t=>!plan().exclude.includes(t.id)).map(t=>t.id);
 // رؤساء القاعات: من يحددهم رئيس القسم، وإن لم يحدد أحداً فحملة الدكتوراه والألقاب العليا
 const isHead=id=>Array.isArray(plan().heads)?plan().heads.includes(id):isSenior(id);
@@ -1156,14 +1159,14 @@ function subjectsDialog(date){
    dlg.close();commit('حُفظت مواد اليوم ('+p.subjects[date].length+')'+(removed?'؛ رُفع '+removed+' مراقباً يدرّسون هذه المواد، أعد الإنشاء لملء خاناتهم':''))};
  });
 }
-// قاعات القسم: كل ما ورد في الجداول الدراسية وخطط التدريس وجدول المراقبات، مجمّعة حسب البناية (أول رقم)
+// قاعات القسم المعتمدة مع ما يضيفه رئيس القسم، مجمّعة حسب البناية (أول رقم)
 const sortRooms=list=>[...new Set(list.map(r=>String(r).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'en',{numeric:true}));
-function knownRooms(){return sortRooms([...sched().map(x=>x.room),...Object.values(db.ttPlans||{}).flatMap(q=>Object.values(q.rooms||{})),...plan().rooms,...(plan().extraRooms||[])])}
+function knownRooms(){return sortRooms([...DEPT_ROOMS,...(plan().extraRooms||[])])}
 function roomPicker(p){
  const all=knownRooms(),sel=new Set(p.rooms),groups={};all.forEach(r=>{const k=/^\d/.test(r)?r[0]:'أخرى';(groups[k]=groups[k]||[]).push(r)});
  const used=r=>sched().filter(x=>roomKey(x.room)===roomKey(r)).length;
  return '<fieldset class="full room-picker"><legend>🏫 القاعات الامتحانية <span class="room-count">'+sel.size+' من '+all.length+'</span></legend>'
-  +'<p class="muted">القاعات مأخوذة من الجداول الدراسية. اضغط القاعة لاختيارها أو إلغائها.</p>'
+  +'<p class="muted">قاعات القسم المعتمدة. اضغط القاعة لاختيارها أو إلغائها.</p>'
   +Object.entries(groups).map(([k,rs])=>'<div class="room-group"><div class="room-group-head"><b>'+(k==='أخرى'?'قاعات أخرى':'البناية '+k)+'</b><button type="button" class="btn-sm secondary" data-room-all="'+esc(k)+'">تحديد الكل</button><button type="button" class="btn-sm secondary" data-room-none="'+esc(k)+'">إلغاء</button></div><div class="room-tiles">'
    +rs.map(r=>'<label class="room-tile" data-g="'+esc(k)+'"><input type="checkbox" name="room" value="'+esc(r)+'"'+(sel.has(r)?' checked':'')+'><span class="room-no">'+esc(r)+'</span><small>'+(used(r)?used(r)+' ساعة تدريس':'غير مستخدمة')+'</small></label>').join('')+'</div></div>').join('')
   +'<div class="date-tools"><label>قاعة غير موجودة؟<input id="newRoom" placeholder="مثل 3410"></label><button type="button" class="secondary" data-room-add>+ إضافة قاعة</button></div></fieldset>';
