@@ -60,6 +60,37 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 select[data-g-sup]{min-width:160px}select[data-g-status]{min-width:125px}
 .install-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.install-steps ol{margin:6px 0;padding-inline-start:20px;line-height:1.9}
 .app-hint{margin:8px 0}
+.notice.notice-sync{background:transparent;color:var(--muted);padding:0 2px;margin:2px 0 14px;font-size:12px}.notice.notice-sync summary{font-weight:400}
+/* الصفحة الرئيسية لرئيس القسم */
+.hd{display:flex;flex-direction:column;gap:16px}
+.hd-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 26px;border-radius:18px;color:#fff;background:linear-gradient(120deg,#0f2747 0%,#163560 55%,#1f5390 100%);box-shadow:0 10px 28px rgba(15,39,71,.22)}
+.hd-hero small{opacity:.75;font-size:13px}.hd-hero h2{margin:4px 0 6px;font-size:24px;color:#fff}.hd-hero p{margin:0;opacity:.9;font-size:14px}.hd-hero b{color:#f5c451}
+.hd-hero img{width:64px;height:64px;border-radius:50%;background:#fff;padding:4px;flex:none;opacity:.95}
+.hd-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.hd-kpi{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;padding:16px 18px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+.hd-kpi:hover{transform:translateY(-2px);border-color:var(--primary)}.hd-kpi:focus-visible{outline:3px solid #e5b94f}
+.hd-ic{grid-row:span 2;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:21px;background:var(--primary-soft)}
+.hd-kv{display:flex;align-items:baseline;gap:8px}.hd-kv b{font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}.hd-kv small{color:var(--muted);font-size:13px}
+.hd-kpi em{font-style:normal;font-size:12px;color:var(--muted);grid-column:2}
+.hd-kpi.bad .hd-ic{background:var(--danger-soft)}.hd-kpi.bad em,.hd-kpi.bad b{color:var(--danger)}
+.hd-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);margin:0}
+.hd-card h3{margin:0 0 10px;font-size:16px}.hd-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.hd-head h3{margin:0}
+.hd-todo{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:10px;font-size:14px}
+.hd-todo:hover{background:var(--surface-2)}.hd-todo span:nth-child(2){flex:1}.hd-todo i{font-style:normal;color:var(--muted);font-size:18px}
+.hd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--primary)}.hd-todo.bad .hd-dot{background:var(--danger)}.hd-todo.warn .hd-dot{background:#e0a526}
+.hd-quick{display:flex;flex-wrap:wrap;gap:8px}
+.hd-quick button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:14px;box-shadow:var(--shadow)}
+.hd-quick button:hover{border-color:var(--primary);color:var(--primary)}.hd-quick button:focus-visible{outline:3px solid #e5b94f}
+.hd-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.hd-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.hd-row:first-of-type{border-top:0}
+.hd-row div{flex:1;min-width:0}.hd-row b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hd-row small{color:var(--muted);font-size:12px}
+.hd-chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap;border:1px solid var(--line)}.hd-chip.bad{background:var(--danger-soft);color:var(--danger);border-color:transparent}
+.hd-ann{padding:10px 0;border-top:1px solid var(--line)}.hd-ann:first-of-type{border-top:0}
+.hd-ann-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.hd-ann-top b{font-size:14px}.hd-ann-top small{color:var(--muted);font-size:12px;white-space:nowrap}
+.hd-prog{height:6px;border-radius:6px;background:var(--line);overflow:hidden;margin:8px 0 4px}.hd-prog i{display:block;height:100%;background:var(--primary);border-radius:6px}
+.hd-empty{color:var(--muted);text-align:center;padding:18px 0;margin:0}
+@media(max-width:900px){.hd-kpis{grid-template-columns:1fr 1fr}.hd-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.hd-hero{padding:18px}.hd-hero h2{font-size:20px}.hd-hero img{width:48px;height:48px}.hd-kpi{padding:12px}.hd-ic{width:38px;height:38px;font-size:18px}.hd-kv{flex-direction:column;gap:0}.hd-kv b{font-size:22px}}
 .ss{position:relative;display:block;min-width:150px}.ss-native{position:absolute!important;inset:auto 0 0 0;height:1px!important;opacity:0;pointer-events:none;padding:0!important;border:0!important}
 .ss-btn{all:unset;box-sizing:border-box;display:block;width:100%;padding:10px 11px;padding-inline-end:30px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;position:relative;min-height:1.4em}
 .ss-btn::after{content:'';position:absolute;left:12px;top:50%;width:6px;height:6px;border:solid var(--muted);border-width:0 2px 2px 0;transform:translateY(-70%) rotate(45deg)}
@@ -669,23 +700,43 @@ function attachment(a){
 }
 function bind(id,fn){const f=document.getElementById(id);if(f)f.onsubmit=e=>{e.preventDefault();fn(Object.fromEntries(new FormData(f)),f)}}
 
+// الصفحة الرئيسية لرئيس القسم: ترحيب، مؤشرات مختصرة، ما يحتاج انتباهه، اختصارات، ثم التكليفات والتبليغات
 function dashboard(){
  if(!isAdmin())return teacherDashboard();
  const localCount=CORE.reduce((s,k)=>s+(localData[k]?.length||0),0);
  const migrate=cloud.on&&!CORE.some(c=>db[c].length)&&localCount?'<div class="alert ok"><span>توجد على هذا المتصفح بيانات محلية سابقة ('+localCount+' سجل). يمكنك رفعها إلى قاعدة البيانات المشتركة.</span><button data-action="migrate">رفع البيانات إلى السحابة</button></div>':'';
- const late=db.tasks.filter(overdue),noDays=db.teachers.filter(t=>!isExternal(t)&&!teacherDays(t).length),open=db.tasks.filter(t=>!t.done);
- const cards=[[1,'التدريسيون',db.teachers.length,''],[2,'التبليغات',db.announcements.length,''],[5,'المهام المتأخرة',late.length,late.length?'danger':''],[6,'اللجان',db.committees.length,'']];
- const alerts=[];
- if(late.length)alerts.push(['danger',late.length+' مهمة متأخرة عن موعدها',5,'عرض التكليفات']);
- if(noDays.length)alerts.push(['warn',noDays.length+' تدريسي بلا أيام تواجد؛ لن تُدرج موادهم في الجدول',1,'استكمال البيانات']);
- if(cloud.on&&prot.denied)alerts.push(['warn','النسخ الاحتياطي التلقائي متوقف: قواعد الحماية في Firebase تحتاج تحديثاً',8,'التفاصيل']);
- else if(db.teachers.length&&Date.now()-lastLocalBackup()>30*864e5)alerts.push(['warn','لم تنزّل نسخة احتياطية على جهازك منذ أكثر من شهر',8,'تنزيل نسخة']);
- if(db.scheduleStale&&db.schedule.length)alerts.push(['warn','تغيّرت المواد أو التدريسيون بعد آخر توليد للجدول',3,'إعادة التوليد']);
- return migrate+appHints()+'<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
- +alerts.map(([c,t,p,l])=>'<div class="alert '+c+'"><span>'+t+'</span><button data-page="'+p+'">'+l+'</button></div>').join('')
- +(db.teachers.length?'':section('ابدأ بإعداد القسم','<p>أضف التدريسيين وأيام تواجدهم، ثم أدخل المواد لتوليد جدول أولي يراعي تعارض التدريسي والقاعة. يمكنك أيضاً استيراد قائمة التدريسيين من Excel.</p><div class="tools"><button data-page="1">إضافة التدريسيين</button><button class="secondary" data-page="9">استيراد من Excel</button></div>'))
- +'<div class="grid">'+section('متابعة التكليفات',open.sort((a,b)=>String(a.due).localeCompare(b.due)).slice(0,6).map(t=>'<div class="item"><strong>'+esc(t.title)+'</strong><div class="muted">'+esc(name(t.teacher))+' · '+esc(t.due)+' '+(overdue(t)?pill('danger','متأخرة'):'')+'</div></div>').join('')||'<p class="empty">لا توجد مهام معلقة</p>')
- +section('آخر التبليغات',db.announcements.slice(-4).reverse().map(a=>'<div class="item"><strong>'+esc(a.title)+'</strong><div class="muted">'+esc(a.date)+' · '+readPill(a)+'</div></div>').join('')||'<p class="empty">لا توجد تبليغات</p>')+'</div>';
+ const now=new Date(),staff=db.teachers.filter(t=>!isExternal(t)),ext=db.teachers.length-staff.length;
+ const open=db.tasks.filter(t=>!t.done),late=open.filter(overdue),noDays=staff.filter(t=>!teacherDays(t).length);
+ const reads=db.announcements.map(a=>db.teachers.length?a.read.length/db.teachers.length:1),readPct=reads.length?Math.round(reads.reduce((x,y)=>x+y,0)/reads.length*100):null;
+ const gp=grad().projects,todayName=DAYS[now.getDay()],todayLessons=todayName?sched().filter(x=>x.day===todayName).length:0;
+ const doneMonth=db.tasks.filter(t=>t.done&&String(taskDoneOn(t)).slice(0,7)===today().slice(0,7)).length;
+ const me=db.teachers.find(t=>t.id===ownTeacher());
+ const hero='<div class="hd-hero"><div><small>'+esc(now.toLocaleDateString('ar-IQ',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))+'</small><h2>'+(now.getHours()<12?'صباح الخير':'مساء الخير')+(me?'، '+esc(me.name):'')+' 👋</h2>'
+  +'<p>'+(late.length?'لديك <b>'+late.length+'</b> '+(late.length===1?'مهمة متأخرة':'مهام متأخرة')+' تحتاج متابعة':'كل التكليفات تسير في موعدها')+(todayLessons?' · <b>'+todayLessons+'</b> ساعة تدريس اليوم':'')+'</p></div>'
+  +'<img src="assets/college-logo.webp" alt="" aria-hidden="true"></div>';
+ const kpi=(page,ic,label,val,sub,tone='')=>'<button class="hd-kpi '+tone+'" data-page="'+page+'"><span class="hd-ic">'+ic+'</span><span class="hd-kv"><b>'+val+'</b><small>'+label+'</small></span>'+(sub?'<em>'+sub+'</em>':'')+'</button>';
+ const kpis='<div class="hd-kpis">'
+  +kpi(1,'👥','التدريسيون',db.teachers.length,staff.length+' من الملاك'+(ext?' · '+ext+' خارجي':''))
+  +kpi(5,'📝','تكليفات مفتوحة',open.length,late.length?late.length+' متأخرة':doneMonth?doneMonth+' أُنجزت هذا الشهر':'لا متأخرات',late.length?'bad':'')
+  +kpi(2,'📢','التبليغات',db.announcements.length,readPct==null?'لا تبليغات بعد':'نسبة القراءة '+readPct+'%')
+  +kpi(gp.length?13:6,gp.length?'🎓':'🧩',gp.length?'بحوث التخرج':'اللجان',gp.length?gp.length:db.committees.length,gp.length?(gp.filter(p=>!p.supervisor).length?gp.filter(p=>!p.supervisor).length+' بلا مشرف':'كلها بمشرفين'):'لجنة فعّالة')
+  +'</div>';
+ const todo=[];
+ if(late.length)todo.push(['bad','📝',late.length+' '+(late.length===1?'مهمة متأخرة':'مهام متأخرة')+' عن موعدها',5]);
+ if(noDays.length)todo.push(['warn','📅',noDays.length+' تدريسي بلا أيام تواجد، لن تُدرج موادهم في الجدول',1]);
+ if(db.scheduleStale&&db.schedule.length)todo.push(['warn','🔄','تغيّرت المواد أو التدريسيون بعد آخر توليد للجدول',3]);
+ if(cloud.on&&prot.denied)todo.push(['warn','💾','النسخ الاحتياطي التلقائي متوقف: قواعد الحماية تحتاج تحديثاً',8]);
+ else if(db.teachers.length&&Date.now()-lastLocalBackup()>30*864e5)todo.push(['info','💾','لم تنزّل نسخة احتياطية على جهازك منذ أكثر من شهر',8]);
+ const attention=todo.length?'<section class="hd-card"><h3>يحتاج انتباهك</h3>'+todo.map(([c,ic,t,p])=>'<button class="hd-todo '+c+'" data-page="'+p+'"><span class="hd-dot"></span><span>'+ic+' '+t+'</span><i>›</i></button>').join('')+'</section>':'';
+ const quick=[[2,'📢','تبليغ جديد'],[5,'📝','تكليف جديد'],[3,'🗓️','الجداول'],[4,'🛡️','المراقبات'],[12,'✉️','كتاب رسمي'],[13,'🎓','بحوث التخرج']];
+ const actions='<div class="hd-quick">'+quick.map(([p,ic,l])=>'<button data-page="'+p+'"><span>'+ic+'</span>'+l+'</button>').join('')+'</div>';
+ const dueChip=t=>!t.due?'':overdue(t)?'<span class="hd-chip bad">متأخرة منذ <span dir="ltr">'+esc(t.due)+'</span></span>':'<span class="hd-chip">'+esc(daysUntil(t.due))+'</span>';
+ const tasks='<section class="hd-card"><div class="hd-head"><h3>التكليفات المفتوحة</h3><button class="link" data-page="5">عرض الكل</button></div>'
+  +(open.length?open.slice().sort((a,b)=>String(a.due||'9999').localeCompare(b.due||'9999')).slice(0,5).map(t=>'<div class="hd-row">'+avatar(t.teacher,'sm')+'<div><b>'+esc(t.title)+'</b><small>'+esc(name(t.teacher))+'</small></div>'+dueChip(t)+'</div>').join(''):'<p class="hd-empty">✨ لا توجد تكليفات مفتوحة</p>')+'</section>';
+ const anns='<section class="hd-card"><div class="hd-head"><h3>آخر التبليغات</h3><button class="link" data-page="2">عرض الكل</button></div>'
+  +(db.announcements.length?db.announcements.slice(-4).reverse().map(a=>{const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length||1,pc=Math.round(n/all*100);return '<div class="hd-ann"><div class="hd-ann-top"><b>'+esc(a.title)+'</b><small>'+esc(String(a.date||'').split('،')[0])+'</small></div><div class="hd-prog"><i style="width:'+pc+'%"></i></div><small class="muted">قرأه '+n+' من '+db.teachers.length+'</small></div>'}).join(''):'<p class="hd-empty">لا توجد تبليغات بعد</p>')+'</section>';
+ const start=db.teachers.length?'':'<section class="hd-card"><h3>ابدأ بإعداد القسم</h3><p class="muted">أضف التدريسيين وأيام تواجدهم، ثم أدخل المواد لتوليد جدول أولي. يمكنك أيضاً استيراد قائمة التدريسيين من Excel.</p><div class="tools"><button data-page="1">إضافة التدريسيين</button><button class="secondary" data-page="9">استيراد من Excel</button></div></section>';
+ return '<div class="hd">'+migrate+hero+appHints()+kpis+start+attention+actions+'<div class="hd-grid">'+tasks+anns+'</div></div>';
 }
 const CHEERS=['يوم جميل لصناعة الفرق في حياة طلبتك.','كل محاضرة فرصة لإلهام قائد أعمال جديد.','خطوة صغيرة كل يوم تصنع إنجازاً كبيراً.','شكراً لعطائك المستمر في قسم إدارة الأعمال.','التنظيم الجيد نصف النجاح، والباقي شغفك.','طلبتك اليوم هم قادة السوق غداً.'];
 function daysUntil(d){const n=Math.round((new Date(d+'T00:00')-new Date(today()+'T00:00'))/864e5);return n<=0?'اليوم':n===1?'غداً':n===2?'بعد يومين':n<=10?'بعد '+n+' أيام':'بعد '+n+' يوماً'}
@@ -2469,7 +2520,7 @@ async function gateAction(a,b){
  if(a==='claim'){b.disabled=true;try{await S.setDoc(S.doc(cloud.fs,'config','admins'),{emails:[cloud.user.email.toLowerCase()]})}catch(e){b.disabled=false;toast('تعذر الاعتماد: '+(e.code==='permission-denied'?'يوجد رئيس قسم معتمد مسبقاً':e.message))}}
 }
 function showApp(){
- $('#gate').hidden=true;$('#view').hidden=false;$('#notice').hidden=false;
+ $('#gate').hidden=true;$('#view').hidden=false;$('#notice').hidden=false;$('#notice').classList.add('notice-sync');
  $('#noticeSummary').textContent='البيانات مشتركة ومتزامنة بين أجهزة القسم';
  $('#noticeText').textContent='يُحفظ كل تعديل فوراً ويظهر لبقية المستخدمين. الملفات المرفقة تُسجّل أسماؤها فقط. يعمل التطبيق دون إنترنت مؤقتاً ويرسل التعديلات عند عودة الاتصال. صدّر نسخة احتياطية دورياً من صفحة النسخ الاحتياطي.';
  render();
