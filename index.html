@@ -59,6 +59,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 select[data-g-sup]{min-width:160px}select[data-g-status]{min-width:125px}
 .install-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.install-steps ol{margin:6px 0;padding-inline-start:20px;line-height:1.9}
 .app-hint{margin:8px 0}
+#notifBtn.notif-off{filter:grayscale(1);opacity:.75}
 .card.stat{cursor:default}.card.stat:hover{border-color:var(--line)}.card.stat b{font-size:20px}
 section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:20px;box-shadow:var(--shadow)}
 section.editing{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
@@ -700,7 +701,16 @@ const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||navigator.platfor
 let installEvt=null;
 const canInstall=()=>!standalone()&&(!!installEvt||isIOS()||/android/i.test(navigator.userAgent));
 const wantNotif=()=>cloud.on&&!!cloud.user&&notifOK()&&Notification.permission==='default';
-function syncPwaButtons(){const i=$('#installBtn'),n=$('#notifBtn');if(i)i.hidden=!canInstall();if(n)n.hidden=!wantNotif()}
+// إيقاف الإشعارات من داخل التطبيق (المتصفح لا يسمح بسحب الإذن برمجياً، فيُحفظ الاختيار على هذا الجهاز)
+const notifMuted=()=>{try{return localStorage.getItem('smart-department-notif')==='off'}catch{return false}};
+const notifOn=()=>notifOK()&&Notification.permission==='granted'&&!notifMuted();
+function syncPwaButtons(){
+ const i=$('#installBtn'),n=$('#notifBtn');if(i)i.hidden=!canInstall();if(!n)return;
+ n.hidden=!(cloud.on&&cloud.user&&notifOK());const on=notifOn();
+ n.textContent=on?'🔔':'🔕';n.classList.toggle('notif-off',!on);
+ n.title=on?'الإشعارات مفعّلة · اضغط لإيقافها':Notification.permission==='denied'?'الإشعارات محظورة من إعدادات المتصفح':'الإشعارات متوقفة · اضغط لتفعيلها';
+ n.setAttribute('aria-label',n.title);n.setAttribute('aria-pressed',String(on));
+}
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;syncPwaButtons();if(page===0)render()});
 addEventListener('appinstalled',()=>{installEvt=null;syncPwaButtons();toast('تم تثبيت التطبيق على جهازك 🎉')});
 async function installApp(){
@@ -710,7 +720,13 @@ async function installApp(){
   +'<div><b>أندرويد (Chrome)</b><ol><li>افتح رابط التطبيق في <b>Chrome</b>.</li><li>اضغط قائمة <b>⋮</b> أعلى الشاشة.</li><li>اختر <b>«تثبيت التطبيق»</b> أو «إضافة إلى الشاشة الرئيسية».</li></ol></div></div>'
   +'<p class="muted">بعد التثبيت يظهر شعار الكلية على شاشة هاتفك ويفتح التطبيق كتطبيق مستقل. على الآيفون تعمل الإشعارات بعد التثبيت فقط.</p><div class="form-actions"><button data-close>حسناً</button></div></form>',()=>{});
 }
+async function toggleNotif(){
+ if(notifOn()){try{localStorage.setItem('smart-department-notif','off')}catch{};syncPwaButtons();return toast('🔕 أُوقفت الإشعارات على هذا الجهاز')}
+ if(notifOK()&&Notification.permission==='denied')return toast('الإشعارات محظورة من المتصفح: اضغط رمز القفل بجانب الرابط ← الإشعارات ← سماح، ثم أعد تحميل الصفحة');
+ return enableNotif();
+}
 async function enableNotif(){
+ try{localStorage.removeItem('smart-department-notif')}catch{}
  if(!notifOK())return toast(isIOS()&&!standalone()?'على الآيفون ثبّت التطبيق على الشاشة الرئيسية أولاً، ثم فعّل الإشعارات من داخله':'هذا المتصفح لا يدعم الإشعارات');
  const p=await Notification.requestPermission();syncPwaButtons();
  if(p==='granted'){showNote('🔔 تم تفعيل الإشعارات','ستصلك هنا التبليغات والتكليفات الجديدة.','welcome');toast('تم تفعيل الإشعارات')}
@@ -732,7 +748,7 @@ function notifyNew(){
  try{localStorage.setItem(seenKey(),JSON.stringify([...new Set([...(seen||[]),...ids])].slice(-500)))}catch{}
  if(!Array.isArray(seen))return;
  const fresh=items.filter(x=>!seen.includes(x[0]));if(!fresh.length)return;
- if(notifOK()&&Notification.permission==='granted'&&(document.hidden||!document.hasFocus()))fresh.slice(0,3).forEach(([id,t,b])=>showNote(t,b,id));
+ if(notifOn()&&(document.hidden||!document.hasFocus()))fresh.slice(0,3).forEach(([id,t,b])=>showNote(t,b,id));
  else toast(fresh[0][1]+': '+fresh[0][2]);
 }
 function appHints(){
@@ -2330,7 +2346,7 @@ async function setAdmins(emails){
 function applyTheme(t){if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme}
 try{applyTheme(localStorage.getItem('smart-department-theme')||'')}catch{}
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
-$('#installBtn').onclick=installApp;$('#notifBtn').onclick=enableNotif;
+$('#installBtn').onclick=installApp;$('#notifBtn').onclick=toggleNotif;
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme,dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches,t=dark?'light':'dark';applyTheme(t);try{localStorage.setItem('smart-department-theme',t)}catch{}};
 // على الهاتف تُفتح القائمة فوق الصفحة، وعلى الحاسوب تُطوى ويتذكر المتصفح الاختيار
 const narrow=()=>matchMedia('(max-width:900px)').matches;
