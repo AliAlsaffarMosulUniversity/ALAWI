@@ -56,6 +56,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .share-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
 .g-in{min-width:180px;width:100%;font:inherit;padding:4px 8px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);color:var(--text)}
 .g-filters input,.g-filters select{width:auto;min-width:130px}
+.g-studs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.g-studs-cell{white-space:nowrap;line-height:1.7}
 select[data-g-sup]{min-width:160px}select[data-g-status]{min-width:125px}
 .install-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.install-steps ol{margin:6px 0;padding-inline-start:20px;line-height:1.9}
 .app-hint{margin:8px 0}
@@ -591,7 +592,7 @@ function actions(f,id){if(!isAdmin())return '';return '<span class="row-actions"
 function formTitle(f,add,edit){return editing?.form===f?edit:add}
 function overdue(t){return !t.done&&!!t.due&&t.due<today()}
 function upsert(f,rec){const col=COLS[f],id=editId(f);if(id){const i=db[col].findIndex(x=>x.id===id);db[col][i]={...db[col][i],...rec}}else db[col].push({id:uid(),...rec});editing=null}
-function teacherRefs(id){return [['مادة',db.courses.filter(c=>c.teacher===id).length],['تكليف',db.tasks.filter(t=>t.teacher===id).length],['مراقبة',db.invigilation.filter(x=>x.teacher===id).length],['لجنة',db.committees.filter(c=>c.chair===id||c.members.includes(id)).length],['سجل عبء',(db.workloads||[]).filter(w=>w.teacher===id).length],['طالب تخرج',(db.grad?.students||[]).filter(s=>s.supervisor===id).length]].filter(([,n])=>n)}
+function teacherRefs(id){return [['مادة',db.courses.filter(c=>c.teacher===id).length],['تكليف',db.tasks.filter(t=>t.teacher===id).length],['مراقبة',db.invigilation.filter(x=>x.teacher===id).length],['لجنة',db.committees.filter(c=>c.chair===id||c.members.includes(id)).length],['سجل عبء',(db.workloads||[]).filter(w=>w.teacher===id).length],['بحث تخرج',grad().projects.filter(p=>p.supervisor===id).length]].filter(([,n])=>n)}
 function remove(f,id){
  const col=COLS[f];
  if(col==='teachers'){const refs=teacherRefs(id);if(refs.length)return toast('لا يمكن حذف التدريسي لارتباطه بـ: '+refs.map(([l,n])=>n+' '+l).join('، ')+'. احذفها أو انقلها أولاً.')}
@@ -703,8 +704,8 @@ function teacherDashboard(){
  const dayBox=section('📅 يومك',(todayLessons.length?'<ol class="t-timeline">'+todayLessons.map(s=>'<li><span dir="ltr">'+esc(s.slot)+'</span><b>'+esc(s.course)+'</b><small>'+esc(s.room||'')+'</small></li>').join('')+'</ol>':'<p class="t-quiet">'+(todayName?'لا محاضرات لديك اليوم. وقت مناسب للبحث والقراءة 📖':'عطلة نهاية الأسبوع، استمتع بوقتك 🌿')+'</p>')
   +(inv[0]?'<div class="t-next"><span class="t-count">'+daysUntil(inv[0].date)+'</span><div><b>'+esc(inv[0].exam||'مراقبة امتحانية')+'</b><small>'+[esc(inv[0].date),inv[0].start?'<span dir="ltr">'+esc(inv[0].start)+(inv[0].end?' – '+esc(inv[0].end):'')+'</span>':'',esc(inv[0].room)].filter(Boolean).join(' · ')+'</small></div></div>'+(inv.length>1?'<p class="muted">و'+(inv.length-1)+' مراقبة أخرى في <button class="link" data-page="4">جدول المراقبات</button></p>':''):''));
  const workBox=section('🎯 مهامي ولجاني',(mine.map(t=>'<div class="t-row"><span>'+esc(t.title)+'</span>'+(overdue(t)?pill('danger','متأخرة'):t.due?pill('info',daysUntil(t.due)):'')+'</div>').join('')+(com.length?'<div class="chips t-coms">'+com.map(c=>'<span class="chip">'+(c.chair===person?'⭐ ':'')+esc(c.title)+'</span>').join('')+'</div>':''))||'<p class="t-quiet">لا مهام مفتوحة. عمل رائع! 🌟</p>');
- const gs=(db.grad?.students||[]).filter(s=>s.supervisor===person);
- return '<div class="t-home">'+hero+appHints()+tcards+section('🗓️ جدولي الأسبوعي',myWeek(person))+(gs.length?section('🎓 طلبتي في بحوث التخرج ('+gs.length+')','<div class="chips">'+gs.map(s=>'<span class="chip">'+esc(s.name)+' '+gradPill(s.status)+'</span>').join('')+'</div><p><button class="link" data-page="13">التفاصيل</button></p>'):'')+'<div class="grid">'+annBox+'<div>'+dayBox+workBox+'</div></div></div>';
+ const gs=grad().projects.filter(p=>p.supervisor===person);
+ return '<div class="t-home">'+hero+appHints()+tcards+section('🗓️ جدولي الأسبوعي',myWeek(person))+(gs.length?section('🎓 بحوث التخرج التي أشرف عليها ('+gs.length+')','<div class="chips">'+gs.map(p=>'<span class="chip">'+esc(p.title||gradStudents(p).join('، '))+' <small>('+gradStudents(p).length+' طالب)</small> '+gradPill(p.status)+'</span>').join('')+'</div><p><button class="link" data-page="13">التفاصيل</button></p>'):'')+'<div class="grid">'+annBox+'<div>'+dayBox+workBox+'</div></div></div>';
 }
 // ===== الإشعارات والتثبيت على الهاتف =====
 // يصل إشعار النظام عند نشر تبليغ أو إسناد تكليف جديد والتطبيق مفتوح أو مثبّت ويعمل في الخلفية،
@@ -1712,17 +1713,22 @@ function bindProtection(){
  document.querySelectorAll('[data-undo]').forEach(b=>b.onclick=()=>{const [id,i]=b.dataset.undo.split('|');undoDeleted(id,Number(i))});
  const w=$('#logWho');if(w)w.onchange=()=>{prot.filter=w.value;render()};
 }
-// ===== بحوث التخرج: طلبة المرحلة الرابعة، توزيعهم على المشرفين بالتساوي، ومتابعة مراحل الإنجاز =====
+// ===== بحوث التخرج: كل بحث يشترك فيه من طالب إلى أربعة طلبة بمشرف واحد، ويُوزَّع البحث على المشرفين بالتساوي =====
 // تُحفظ في meta/state (المفتاح grad) فيراها كل تدريسي، ويعدّلها رئيس القسم ومن يملك صلاحيتها.
-const GRAD_STATUS=['لم يبدأ','العنوان معتمد','قيد الإنجاز','المسودة مسلّمة','نوقش'];
-const gradDefault=()=>({year:'2025-2026',students:[],supervisors:[],max:0});
-const grad=()=>db.grad||gradDefault();
-const gradEdit=()=>(db.grad??=gradDefault());
+// البيانات القديمة (طالب لكل سجل) تتحول تلقائياً إلى بحوث بطالب واحد.
+const GRAD_STATUS=['لم يبدأ','العنوان معتمد','قيد الإنجاز','المسودة مسلّمة','نوقش'],GRAD_MAX=4;
+const gradDefault=()=>({year:'2025-2026',projects:[],supervisors:[],max:0});
+const gradUp=g=>{if(!g)return gradDefault();if(!g.projects){const {students=[],...rest}=g;return {...rest,projects:students.map(s=>({id:s.id,title:s.title||'',supervisor:s.supervisor||'',status:s.status||GRAD_STATUS[0],study:s.study||'morning',section:s.section||'',students:[s.name]}))}}return g};
+const grad=()=>gradUp(db.grad);
+const gradEdit=()=>(db.grad=gradUp(db.grad));
 const gradPill=st=>{const i=Math.max(0,GRAD_STATUS.indexOf(st));return pill(i===4?'ok':i===0?'warn':'info',GRAD_STATUS[i])};
 const studyLabel=s=>s==='evening'?'مسائي':'صباحي';
-let gf={q:'',study:'',sup:'',status:''};
-function gradLoads(g){const m={};g.supervisors.forEach(id=>m[id]=0);g.students.forEach(s=>{if(s.supervisor)m[s.supervisor]=(m[s.supervisor]||0)+1});return m}
-// ملاءمة الطالب للمشرف: تطابق حقل عنوان البحث مع تخصص التدريسي أو المواد التي يدرّسها
+const gradStudents=p=>(p.students||[]).filter(Boolean);
+const studentsHTML=p=>gradStudents(p).map(n=>esc(n)).join('<br>');
+let gf={q:'',study:'',sup:'',status:''},gradEditing='';
+// حمل المشرف: عدد البحوث (وحدة الإشراف)، ومعه عدد الطلبة للعرض
+function gradLoads(g){const m={};g.supervisors.forEach(id=>m[id]={p:0,s:0});g.projects.forEach(p=>{if(p.supervisor){const o=m[p.supervisor]??={p:0,s:0};o.p++;o.s+=gradStudents(p).length}});return m}
+// ملاءمة البحث للمشرف: تطابق حقل العنوان مع تخصص التدريسي أو المواد التي يدرّسها
 function gradFit(title,id){
  const tf=fieldsOf(title||'');tf.delete('اداره');if(!tf.size)return 0;
  const t=db.teachers.find(x=>x.id===id),mine=new Set([...fieldsOf(t?.specialty||''),...sched().filter(x=>x.teacher===id).flatMap(x=>[...fieldsOf(x.course)])]);
@@ -1730,91 +1736,116 @@ function gradFit(title,id){
 }
 function distributeGrad(sup,max,all){
  const g=gradEdit();g.supervisors=sup;g.max=max||0;
- g.students.forEach(s=>{if(all||s.supervisor&&!sup.includes(s.supervisor))s.supervisor=''});
- const load=Object.fromEntries(sup.map(id=>[id,0]));g.students.forEach(s=>{if(s.supervisor in load)load[s.supervisor]++});
- // الحصة المتساوية لكل مشرف (أو الحد الأعلى إن كان أقل)، وضمنها يُفضَّل الأقرب تخصصاً لعنوان البحث
- const share=Math.ceil(g.students.length/sup.length),cap=max?Math.min(max,share):share;
- const todo=g.students.filter(s=>!s.supervisor).map(s=>({s,fits:sup.map(id=>gradFit(s.title,id))}));
- // الطلبة ذوو العناوين الأوضح تخصصاً يُوزَّعون أولاً حتى لا تمتلئ حصة المشرف المناسب بغيرهم
- todo.sort((a,b)=>Math.max(...b.fits)-Math.max(...a.fits));
+ g.projects.forEach(p=>{if(all||p.supervisor&&!sup.includes(p.supervisor))p.supervisor=''});
+ const load=Object.fromEntries(sup.map(id=>[id,0])),kids=Object.fromEntries(sup.map(id=>[id,0]));
+ g.projects.forEach(p=>{if(p.supervisor in load){load[p.supervisor]++;kids[p.supervisor]+=gradStudents(p).length}});
+ // الحصة المتساوية من البحوث لكل مشرف (أو الحد الأعلى إن كان أقل)، وضمنها يُفضَّل الأقرب تخصصاً ثم الأقل طلبة
+ const share=Math.ceil(g.projects.length/sup.length),cap=max?Math.min(max,share):share;
+ const todo=g.projects.filter(p=>!p.supervisor).map(p=>({p,fits:sup.map(id=>gradFit(p.title,id))}));
+ todo.sort((a,b)=>Math.max(...b.fits)-Math.max(...a.fits)||gradStudents(b.p).length-gradStudents(a.p).length);
  let left=0;
- for(const {s,fits} of todo){
+ for(const {p,fits} of todo){
   let free=sup.map((id,i)=>[id,fits[i]]).filter(([id])=>load[id]<cap);
   if(!free.length)free=sup.map((id,i)=>[id,fits[i]]).filter(([id])=>!max||load[id]<max);
   if(!free.length){left++;continue}
-  const best=free.map(([id,f])=>[id,f,load[id],Math.random()]).sort((a,b)=>b[1]-a[1]||a[2]-b[2]||a[3]-b[3])[0][0];
-  s.supervisor=best;load[best]++;
+  const best=free.map(([id,f])=>[id,f,load[id],kids[id],Math.random()]).sort((a,b)=>b[1]-a[1]||a[2]-b[2]||a[3]-b[3]||a[4]-b[4])[0][0];
+  p.supervisor=best;load[best]++;kids[best]+=gradStudents(p).length;
  }
  return left;
 }
 function gradList(){
- const q=gf.q.trim();
- return grad().students.filter(s=>(!gf.study||s.study===gf.study)&&(!gf.sup||(gf.sup==='-'?!s.supervisor:s.supervisor===gf.sup))&&(!gf.status||s.status===gf.status)&&(!q||(s.name+' '+(s.title||'')).includes(q)));
+ const q=ssNorm(gf.q);
+ return grad().projects.filter(p=>(!gf.study||p.study===gf.study)&&(!gf.sup||(gf.sup==='-'?!p.supervisor:p.supervisor===gf.sup))&&(!gf.status||(p.status||GRAD_STATUS[0])===gf.status)&&(!q||ssNorm((p.title||'')+' '+gradStudents(p).join(' ')).includes(q)));
+}
+function gradForm(g){
+ const p=gradEditing?g.projects.find(x=>x.id===gradEditing):null,v=k=>esc(p?.[k]||''),st=i=>esc(p?gradStudents(p)[i]||'':'');
+ const staff=db.teachers.filter(t=>!isExternal(t)),ext=db.teachers.filter(isExternal),opt=(val,l,cur)=>'<option value="'+esc(val)+'"'+(val===cur?' selected':'')+'>'+esc(l)+'</option>';
+ return section(p?'✏️ تعديل بحث تخرج':'➕ إضافة بحث تخرج','<form id="gradProject"><label class="full">عنوان البحث<input name="title" value="'+v('title')+'" placeholder="يمكن تركه فارغاً وإضافته لاحقاً"></label>'
+  +'<fieldset class="full g-studs"><legend>الطلبة المشتركون في البحث (من 1 إلى '+GRAD_MAX+')</legend>'+Array.from({length:GRAD_MAX},(_,i)=>'<label>الطالب '+(i+1)+(i?' (اختياري)':'')+'<input name="s'+i+'" value="'+st(i)+'"'+(i?'':' required')+'></label>').join('')+'</fieldset>'
+  +'<label>الدراسة<select name="study">'+opt('morning','صباحي',p?.study||'morning')+opt('evening','مسائي',p?.study||'morning')+'</select></label>'
+  +'<label>الشعبة<input name="section" value="'+v('section')+'"></label>'
+  +'<label>المشرف (اختياري)<select name="supervisor">'+opt('','— يُحدد بالتوزيع —',p?.supervisor||'')+'<optgroup label="ملاك القسم">'+staff.map(t=>opt(t.id,t.name,p?.supervisor||'')).join('')+'</optgroup>'+(ext.length?'<optgroup label="خارجيون">'+ext.map(t=>opt(t.id,t.name,p?.supervisor||'')).join('')+'</optgroup>':'')+'</select></label>'
+  +'<div class="form-actions full"><button>'+(p?'حفظ التعديل':'إضافة البحث')+'</button>'+(p?'<button type="button" class="secondary" data-g-cancel>إلغاء التعديل</button>':'')+'</div></form>');
 }
 function gradView(){
  const g=grad(),ed=isAdmin();
  if(!ed){
-  const list=g.students.filter(s=>s.supervisor===person);
-  return section('🎓 طلبتي في بحوث التخرج · '+esc(g.year)+' ('+list.length+')',list.length?table(['ت','الطالب','الدراسة / الشعبة','عنوان البحث','الحالة'],list.map((s,i)=>[i+1,esc(s.name),studyLabel(s.study)+(s.section?' / '+esc(s.section):''),esc(s.title||'—'),gradPill(s.status)])):'<p class="empty">لم يُسند إليك طلبة في بحوث التخرج لهذا العام بعد.</p>');
+  const list=g.projects.filter(p=>p.supervisor===person),n=list.reduce((a,p)=>a+gradStudents(p).length,0);
+  return section('🎓 بحوث التخرج التي أشرف عليها · '+esc(g.year)+' ('+list.length+' بحث، '+n+' طالب)',list.length?table(['ت','عنوان البحث','الطلبة','الدراسة / الشعبة','الحالة'],list.map((p,i)=>[i+1,esc(p.title||'—'),studentsHTML(p),studyLabel(p.study)+(p.section?' / '+esc(p.section):''),gradPill(p.status)])):'<p class="empty">لم تُسند إليك بحوث تخرج لهذا العام بعد.</p>');
  }
  const loads=gradLoads(g),staff=db.teachers.filter(t=>!isExternal(t)),ext=db.teachers.filter(isExternal),list=gradList();
- const assigned=g.students.filter(s=>s.supervisor).length,done=g.students.filter(s=>s.status===GRAD_STATUS[4]).length;
- const cards='<div class="cards"><div class="card stat"><small>طلبة التخرج</small><b>'+g.students.length+'</b></div><div class="card stat'+(g.students.length&&assigned<g.students.length?' danger':'')+'"><small>بلا مشرف</small><b>'+(g.students.length-assigned)+'</b></div><div class="card stat"><small>المشرفون</small><b>'+Object.keys(loads).filter(id=>loads[id]).length+'</b></div><div class="card stat"><small>نوقشت بحوثهم</small><b>'+done+'</b></div></div>';
- const supChip=t=>'<label class="chip"><input type="checkbox" name="sup" value="'+esc(t.id)+'"'+(g.supervisors.includes(t.id)?' checked':'')+'>'+esc(t.name)+(loads[t.id]?' <small>('+loads[t.id]+')</small>':'')+'</label>';
- const students=section('الطلبة','<div class="tools"><button data-action="gradImport">📥 استيراد الطلبة من Excel</button><button class="secondary" data-action="gradTemplate">تنزيل نموذج Excel</button><input id="gradFile" type="file" accept=".xlsx,.xls" hidden></div><p class="muted">أعمدة الملف: اسم الطالب، الدراسة (صباحي/مسائي)، الشعبة، عنوان البحث (اختياري)، المشرف (اختياري). الأسماء المكررة تُتجاوز.</p>'
-  +form('gradStudent',field('name','اسم الطالب','text',true)+'<label>الدراسة<select name="study"><option value="morning">صباحي</option><option value="evening">مسائي</option></select></label>'+field('section','الشعبة','text',false)+field('title','عنوان البحث','text',false,'full'),'إضافة طالب'));
- const dist=section('المشرفون والتوزيع التلقائي','<form id="gradDist"><label>العام الدراسي<input name="year" value="'+esc(g.year)+'"></label><label>الحد الأعلى لكل مشرف (اختياري)<input name="max" type="number" min="1" value="'+(g.max||'')+'"></label>'
+ const nStud=g.projects.reduce((a,p)=>a+gradStudents(p).length,0),noSup=g.projects.filter(p=>!p.supervisor).length,done=g.projects.filter(p=>p.status===GRAD_STATUS[4]).length;
+ const cards='<div class="cards"><div class="card stat"><small>بحوث التخرج</small><b>'+g.projects.length+'</b></div><div class="card stat"><small>الطلبة</small><b>'+nStud+'</b></div><div class="card stat'+(noSup?' danger':'')+'"><small>بحوث بلا مشرف</small><b>'+noSup+'</b></div><div class="card stat"><small>المشرفون</small><b>'+Object.values(loads).filter(o=>o.p).length+'</b></div><div class="card stat"><small>بحوث نوقشت</small><b>'+done+'</b></div></div>';
+ const supChip=t=>'<label class="chip"><input type="checkbox" name="sup" value="'+esc(t.id)+'"'+(g.supervisors.includes(t.id)?' checked':'')+'>'+esc(t.name)+(loads[t.id]?.p?' <small>('+loads[t.id].p+')</small>':'')+'</label>';
+ const tools=section('الاستيراد','<div class="tools"><button data-action="gradImport">📥 استيراد البحوث من Excel</button><button class="secondary" data-action="gradTemplate">تنزيل نموذج Excel</button><input id="gradFile" type="file" accept=".xlsx,.xls" hidden></div><p class="muted">في النموذج: صف لكل بحث، وفيه عنوان البحث وأسماء طلبته (من 1 إلى 4) والدراسة والشعبة والمشرف (اختياري). إن كان ملفك صفاً لكل طالب، فالطلبة الذين لهم العنوان نفسه يُجمعون في بحث واحد.</p>');
+ const dist=section('المشرفون والتوزيع التلقائي','<form id="gradDist"><label>العام الدراسي<input name="year" value="'+esc(g.year)+'"></label><label>الحد الأعلى من البحوث لكل مشرف (اختياري)<input name="max" type="number" min="1" value="'+(g.max||'')+'"></label>'
   +'<fieldset class="full"><legend>المشرفون من ملاك القسم ('+staff.length+')</legend><div class="chips">'+staff.map(supChip).join('')+'</div></fieldset>'
   +(ext.length?'<details class="full"><summary>تدريسيون خارجيون ('+ext.length+')</summary><div class="chips">'+ext.map(supChip).join('')+'</div></details>':'')
-  +'<label class="chip full"><input type="checkbox" name="all" value="1"> إعادة توزيع كل الطلبة من جديد (يلغي التوزيع الحالي)</label>'
-  +'<div class="form-actions"><button>⚖️ توزيع الطلبة بالتساوي</button></div></form><p class="muted">يُوزَّع الطلبة بلا مشرف على المشرفين المختارين بالتساوي، مع تفضيل المشرف الأقرب تخصصاً لعنوان البحث عند التساوي. التوزيع اليدوي في الجدول يبقى كما هو.</p>'
-  +(Object.keys(loads).length?'<div class="chips">'+Object.entries(loads).sort((a,b)=>b[1]-a[1]).map(([id,n])=>'<span class="chip">'+esc(name(id))+': <b>'+n+'</b></span>').join('')+'</div>':''));
+  +'<label class="chip full"><input type="checkbox" name="all" value="1"> إعادة توزيع كل البحوث من جديد (يلغي التوزيع الحالي)</label>'
+  +'<div class="form-actions"><button>⚖️ توزيع البحوث بالتساوي</button></div></form><p class="muted">يُوزَّع كل بحث بطلبته معاً على مشرف واحد، وتتساوى أعداد البحوث بين المشرفين، ويُفضَّل الأقرب تخصصاً لعنوان البحث ثم الأقل طلبة. التوزيع اليدوي في الجدول يبقى كما هو.</p>'
+  +(Object.keys(loads).length?'<div class="chips">'+Object.entries(loads).sort((a,b)=>b[1].p-a[1].p).map(([id,o])=>'<span class="chip">'+esc(name(id))+': <b>'+o.p+'</b> بحث · '+o.s+' طالب</span>').join('')+'</div>':''));
  const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(l)+'</option>';
  const supOpts=cur=>opt('','— بلا مشرف —',cur)+'<optgroup label="ملاك القسم">'+staff.map(t=>opt(t.id,t.name,cur)).join('')+'</optgroup>'+(ext.length?'<optgroup label="خارجيون">'+ext.map(t=>opt(t.id,t.name,cur)).join('')+'</optgroup>':'');
- const filters='<div class="tools g-filters"><input id="gq" placeholder="بحث بالاسم أو العنوان" value="'+esc(gf.q)+'"><select id="gstudy">'+opt('','كل الدراسات',gf.study)+opt('morning','صباحي',gf.study)+opt('evening','مسائي',gf.study)+'</select><select id="gsup">'+opt('','كل المشرفين',gf.sup)+opt('-','بلا مشرف',gf.sup)+g.supervisors.concat(Object.keys(loads)).filter((x,i,a)=>a.indexOf(x)===i).map(id=>opt(id,name(id),gf.sup)).join('')+'</select><select id="gstatus">'+opt('','كل الحالات',gf.status)+GRAD_STATUS.map(x=>opt(x,x,gf.status)).join('')+'</select>'
-  +'<button class="secondary" data-r-print>🖨️ طباعة</button><button class="secondary" data-action="gradExcel">📊 Excel</button>'+(g.students.length?'<button class="btn-sm ghost-danger" data-action="gradClear">حذف كل الطلبة</button>':'')+'</div>';
- const rows=list.map((s,i)=>[i+1,esc(s.name),studyLabel(s.study)+(s.section?' / '+esc(s.section):''),'<input class="g-in" data-g-title="'+esc(s.id)+'" value="'+esc(s.title||'')+'" placeholder="عنوان البحث">','<select data-g-sup="'+esc(s.id)+'">'+supOpts(s.supervisor||'')+'</select>','<select data-g-status="'+esc(s.id)+'">'+GRAD_STATUS.map(x=>opt(x,x,s.status||GRAD_STATUS[0])).join('')+'</select>','<span class="row-actions"><button class="btn-sm secondary" data-g-edit="'+esc(s.id)+'">تعديل</button><button class="btn-sm ghost-danger" data-g-del="'+esc(s.id)+'">حذف</button></span>']);
- return cards+dist+students+section('قائمة بحوث التخرج · '+esc(g.year)+' ('+list.length+(list.length!==g.students.length?' من '+g.students.length:'')+')',filters+table(['ت','الطالب','الدراسة / الشعبة','عنوان البحث','المشرف','الحالة',''],rows))
+ const filters='<div class="tools g-filters"><input id="gq" placeholder="بحث بالعنوان أو اسم الطالب" value="'+esc(gf.q)+'"><select id="gstudy">'+opt('','كل الدراسات',gf.study)+opt('morning','صباحي',gf.study)+opt('evening','مسائي',gf.study)+'</select><select id="gsup">'+opt('','كل المشرفين',gf.sup)+opt('-','بلا مشرف',gf.sup)+g.supervisors.concat(Object.keys(loads)).filter((x,i,a)=>a.indexOf(x)===i).map(id=>opt(id,name(id),gf.sup)).join('')+'</select><select id="gstatus">'+opt('','كل الحالات',gf.status)+GRAD_STATUS.map(x=>opt(x,x,gf.status)).join('')+'</select>'
+  +'<button class="secondary" data-r-print>🖨️ طباعة</button><button class="secondary" data-action="gradExcel">📊 Excel</button>'+(g.projects.length?'<button class="btn-sm ghost-danger" data-action="gradClear">حذف كل البحوث</button>':'')+'</div>';
+ const rows=list.map((p,i)=>[i+1,'<input class="g-in" data-g-title="'+esc(p.id)+'" value="'+esc(p.title||'')+'" placeholder="عنوان البحث">','<div class="g-studs-cell">'+studentsHTML(p)+'</div><small class="muted">'+gradStudents(p).length+' طالب</small>',studyLabel(p.study)+(p.section?' / '+esc(p.section):''),'<select data-g-sup="'+esc(p.id)+'">'+supOpts(p.supervisor||'')+'</select>','<select data-g-status="'+esc(p.id)+'">'+GRAD_STATUS.map(x=>opt(x,x,p.status||GRAD_STATUS[0])).join('')+'</select>','<span class="row-actions"><button class="btn-sm secondary" data-g-edit="'+esc(p.id)+'">تعديل</button><button class="btn-sm ghost-danger" data-g-del="'+esc(p.id)+'">حذف</button></span>']);
+ return cards+gradForm(g)+dist+tools+section('قائمة بحوث التخرج · '+esc(g.year)+' ('+list.length+(list.length!==g.projects.length?' من '+g.projects.length:'')+')',filters+table(['ت','عنوان البحث','الطلبة','الدراسة / الشعبة','المشرف','الحالة',''],rows))
   +'<div class="r-report">'+gradReport(list)+'</div>';
 }
 function gradReport(list){
- const by={};list.forEach(s=>(by[s.supervisor||'']??=[]).push(s));
+ const by={};list.forEach(p=>(by[p.supervisor||'']??=[]).push(p));
  const t=(head,rows)=>'<table class="rr-t"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
- return '<div class="rr-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>توزيع بحوث التخرج على المشرفين · '+esc(grad().year)+'</h2><span>عدد الطلبة: '+list.length+' · تاريخ الإعداد: '+today()+'</span></div></div>'
-  +Object.entries(by).sort((a,b)=>name(a[0]).localeCompare(name(b[0]),'ar')).map(([id,ss])=>'<h3>'+(id?esc(name(id)):'بلا مشرف')+' ('+ss.length+')</h3>'+t(['ت','الطالب','الدراسة / الشعبة','عنوان البحث','الحالة'],ss.map((s,i)=>[i+1,esc(s.name),studyLabel(s.study)+(s.section?' / '+esc(s.section):''),esc(s.title||'—'),esc(s.status||GRAD_STATUS[0])]))).join('')
+ const n=list.reduce((a,p)=>a+gradStudents(p).length,0);
+ return '<div class="rr-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>توزيع بحوث التخرج على المشرفين · '+esc(grad().year)+'</h2><span>عدد البحوث: '+list.length+' · عدد الطلبة: '+n+' · تاريخ الإعداد: '+today()+'</span></div></div>'
+  +Object.entries(by).sort((a,b)=>name(a[0]).localeCompare(name(b[0]),'ar')).map(([id,ps])=>'<h3>'+(id?esc(name(id)):'بلا مشرف')+' ('+ps.length+' بحث، '+ps.reduce((a,p)=>a+gradStudents(p).length,0)+' طالب)</h3>'+t(['ت','عنوان البحث','الطلبة','الدراسة / الشعبة','الحالة'],ps.map((p,i)=>[i+1,esc(p.title||'—'),studentsHTML(p),studyLabel(p.study)+(p.section?' / '+esc(p.section):''),esc(p.status||GRAD_STATUS[0])]))).join('')
   +'<div class="rr-sign"><span>رئيس القسم: ..............................</span><span>التوقيع: ....................</span><span>التاريخ: '+today()+'</span></div>';
 }
 async function gradImport(file){
  try{
   const X=await getSheetJs(),book=X.read(await file.arrayBuffer(),{type:'array'}),rows=X.utils.sheet_to_json(book.Sheets[book.SheetNames[0]],{header:1,defval:'',raw:false});
-  const hi=rows.findIndex(r=>r.some(c=>/اسم|الطالب/.test(String(c))));if(hi<0)throw Error('لم أجد عمود «اسم الطالب» في الملف');
-  const h=rows[hi].map(c=>String(c).trim()),col=re=>h.findIndex(c=>re.test(c)),cn=col(/اسم/)>=0?col(/اسم/):col(/الطالب/);
+  const hi=rows.findIndex(r=>r.some(c=>/اسم|الطالب|طالب/.test(String(c))));if(hi<0)throw Error('لم أجد عمود أسماء الطلبة في الملف');
+  const h=rows[hi].map(c=>String(c).trim()),col=re=>h.findIndex(c=>re.test(c)),cell=(r,i)=>i<0?'':String(r[i]??'').trim().replace(/\s+/g,' ');
+  const sc=h.map((c,i)=>/طالب|اسم/.test(c)&&!/عنوان/.test(c)?i:-1).filter(i=>i>=0);
   const cs=col(/دراسة/),cc=col(/شعبة/),ct=col(/عنوان|البحث|المشروع/),cv=col(/مشرف/);
-  const g=gradEdit(),have=new Set(g.students.map(s=>s.name));let n=0,skip=0;
+  const g=gradEdit(),have=new Set(g.projects.flatMap(gradStudents));let n=0,ns=0,skip=0;const byTitle={};
   for(const r of rows.slice(hi+1)){
-   const nm=String(r[cn]??'').trim().replace(/\s+/g,' ');if(!nm)continue;if(have.has(nm)){skip++;continue}have.add(nm);
-   g.students.push({id:uid(),name:nm,study:/مسائ/.test(String(r[cs]??''))?'evening':'morning',section:String(r[cc]??'').trim(),title:String(r[ct]??'').trim(),supervisor:cv>=0?matchTeacher(String(r[cv]??'')):'',status:GRAD_STATUS[0]});n++;
+   const names=sc.map(i=>cell(r,i)).filter(x=>x&&!have.has(x));skip+=sc.map(i=>cell(r,i)).filter(x=>x&&have.has(x)).length;if(!names.length)continue;names.forEach(x=>have.add(x));
+   const title=cell(r,ct),study=/مسائ/.test(cell(r,cs))?'evening':'morning',section=cell(r,cc),sup=cv>=0?matchTeacher(cell(r,cv)):'';
+   // ملف بصف لكل طالب: من لهم العنوان نفسه يُضمّون إلى البحث نفسه (حتى 4 طلبة)
+   const k=title&&sc.length===1?ssNorm(title)+'|'+study+'|'+section:'',same=k&&byTitle[k];
+   if(same&&gradStudents(same).length<GRAD_MAX){same.students.push(...names.slice(0,GRAD_MAX-gradStudents(same).length));if(!same.supervisor&&sup)same.supervisor=sup;ns+=names.length;continue}
+   const p={id:uid(),title,supervisor:sup,status:GRAD_STATUS[0],study,section,students:names.slice(0,GRAD_MAX)};g.projects.push(p);if(k)byTitle[k]=p;n++;ns+=p.students.length;
   }
-  commit('أُضيف '+n+' طالب'+(skip?' وتُجوِز '+skip+' اسم مكرر':''));
+  commit('أُضيف '+n+' بحث تضم '+ns+' طالب'+(skip?' وتُجوِز '+skip+' اسم مكرر':''));
  }catch(e){toast('تعذر الاستيراد: '+e.message)}
 }
-async function gradTemplate(){try{const X=await getSheetJs(),b=X.utils.book_new(),sh=X.utils.aoa_to_sheet([['اسم الطالب','الدراسة','الشعبة','عنوان البحث','المشرف'],['مثال: أحمد محمد علي','صباحي','A','','']]);sh['!cols']=[{wch:32},{wch:12},{wch:8},{wch:48},{wch:28}];X.utils.book_append_sheet(b,sh,'طلبة التخرج');X.writeFile(b,'graduation-students-template.xlsx')}catch(e){toast(e.message)}}
+async function gradTemplate(){try{const X=await getSheetJs(),b=X.utils.book_new(),sh=X.utils.aoa_to_sheet([['عنوان البحث','الطالب 1','الطالب 2','الطالب 3','الطالب 4','الدراسة','الشعبة','المشرف'],['أثر التسويق الرقمي على ولاء الزبون','أحمد محمد علي','سارة خالد حسن','','','صباحي','A','']]);sh['!cols']=[{wch:44},{wch:26},{wch:26},{wch:26},{wch:26},{wch:10},{wch:8},{wch:28}];X.utils.book_append_sheet(b,sh,'بحوث التخرج');X.writeFile(b,'graduation-projects-template.xlsx')}catch(e){toast(e.message)}}
 async function gradExcel(){
  try{const X=await getSheetJs(),b=X.utils.book_new(),list=gradList().slice().sort((a,b)=>name(a.supervisor).localeCompare(name(b.supervisor),'ar'));
-  X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['ت','الطالب','الدراسة','الشعبة','عنوان البحث','المشرف','الحالة'],...list.map((s,i)=>[i+1,s.name,studyLabel(s.study),s.section||'',s.title||'',s.supervisor?name(s.supervisor):'',s.status||GRAD_STATUS[0]])]),'بحوث التخرج');
-  const loads=gradLoads(grad());X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['المشرف','عدد الطلبة'],...Object.entries(loads).map(([id,n])=>[name(id),n])]),'المشرفون');
+  X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['ت','عنوان البحث','الطالب 1','الطالب 2','الطالب 3','الطالب 4','عدد الطلبة','الدراسة','الشعبة','المشرف','الحالة'],...list.map((p,i)=>{const s=gradStudents(p);return [i+1,p.title||'',s[0]||'',s[1]||'',s[2]||'',s[3]||'',s.length,studyLabel(p.study),p.section||'',p.supervisor?name(p.supervisor):'',p.status||GRAD_STATUS[0]]})]),'بحوث التخرج');
+  const loads=gradLoads(grad());X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['المشرف','عدد البحوث','عدد الطلبة'],...Object.entries(loads).map(([id,o])=>[name(id),o.p,o.s])]),'المشرفون');
   X.writeFile(b,'بحوث-التخرج-'+today()+'.xlsx')}catch(e){toast(e.message)}
 }
 function bindGrad(){
  if(!isAdmin())return;
- const g=gradEdit,find=id=>gradEdit().students.find(s=>s.id===id);
- bind('gradStudent',d=>{const nm=d.name.trim().replace(/\s+/g,' ');if(g().students.some(s=>s.name===nm))return toast('الطالب مضاف مسبقاً');g().students.push({id:uid(),name:nm,study:d.study,section:d.section.trim(),title:d.title.trim(),supervisor:'',status:GRAD_STATUS[0]});commit('تمت إضافة الطالب')});
- bind('gradDist',(d,f)=>{const sup=new FormData(f).getAll('sup');if(!sup.length)return toast('اختر المشرفين أولاً');if(d.all&&!confirm('إعادة توزيع كل الطلبة وإلغاء التوزيع الحالي؟'))return;g().year=d.year.trim()||g().year;const left=distributeGrad(sup,Number(d.max)||0,!!d.all);commit(left?'وُزّع الطلبة، وبقي '+left+' طالب بلا مشرف لأن المشرفين بلغوا الحد الأعلى':'تم توزيع الطلبة على '+sup.length+' مشرف بالتساوي')});
- document.querySelectorAll('[data-g-sup]').forEach(x=>x.onchange=()=>{const s=find(x.dataset.gSup);if(s){s.supervisor=x.value;commit('تم تغيير المشرف')}});
- document.querySelectorAll('[data-g-status]').forEach(x=>x.onchange=()=>{const s=find(x.dataset.gStatus);if(s){s.status=x.value;commit('تم تحديث الحالة')}});
- document.querySelectorAll('[data-g-title]').forEach(x=>x.onchange=()=>{const s=find(x.dataset.gTitle);if(s){s.title=x.value.trim();commit('تم حفظ عنوان البحث')}});
- document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>{const s=find(b.dataset.gEdit);if(!s)return;const nm=prompt('اسم الطالب',s.name);if(nm===null)return;const sec=prompt('الشعبة',s.section||'');s.name=nm.trim()||s.name;if(sec!==null)s.section=sec.trim();commit('تم حفظ التعديل')});
- document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>{const s=find(b.dataset.gDel);if(s&&confirm('حذف الطالب «'+s.name+'»؟')){g().students=g().students.filter(x=>x.id!==s.id);commit('تم حذف الطالب')}});
+ const find=id=>gradEdit().projects.find(p=>p.id===id);
+ bind('gradProject',d=>{
+  const names=Array.from({length:GRAD_MAX},(_,i)=>String(d['s'+i]||'').trim().replace(/\s+/g,' ')).filter(Boolean);
+  if(!names.length)return toast('اكتب اسم طالب واحد على الأقل');
+  if(new Set(names).size<names.length)return toast('اسم طالب مكرر في البحث نفسه');
+  const g=gradEdit(),other=g.projects.filter(p=>p.id!==gradEditing).flatMap(p=>gradStudents(p).map(n=>[n,p])),dup=names.find(n=>other.some(([m])=>m===n));
+  if(dup)return toast('الطالب «'+dup+'» مسجّل في بحث آخر');
+  const rec={title:d.title.trim(),students:names,study:d.study,section:d.section.trim(),supervisor:d.supervisor||''};
+  if(gradEditing){Object.assign(find(gradEditing)||{},rec);gradEditing='';commit('تم حفظ التعديل')}
+  else{g.projects.push({id:uid(),status:GRAD_STATUS[0],...rec});commit('أُضيف البحث ('+names.length+' طالب)')}
+ });
+ bind('gradDist',(d,f)=>{const sup=new FormData(f).getAll('sup');if(!sup.length)return toast('اختر المشرفين أولاً');if(d.all&&!confirm('إعادة توزيع كل البحوث وإلغاء التوزيع الحالي؟'))return;const g=gradEdit();g.year=d.year.trim()||g.year;const left=distributeGrad(sup,Number(d.max)||0,!!d.all);commit(left?'وُزّعت البحوث، وبقي '+left+' بحث بلا مشرف لأن المشرفين بلغوا الحد الأعلى':'تم توزيع البحوث على '+sup.length+' مشرف بالتساوي')});
+ document.querySelectorAll('[data-g-sup]').forEach(x=>x.onchange=()=>{const p=find(x.dataset.gSup);if(p){p.supervisor=x.value;commit('تم تغيير المشرف')}});
+ document.querySelectorAll('[data-g-status]').forEach(x=>x.onchange=()=>{const p=find(x.dataset.gStatus);if(p){p.status=x.value;commit('تم تحديث الحالة')}});
+ document.querySelectorAll('[data-g-title]').forEach(x=>x.onchange=()=>{const p=find(x.dataset.gTitle);if(p){p.title=x.value.trim();commit('تم حفظ عنوان البحث')}});
+ document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>{gradEditing=b.dataset.gEdit;render();$('#gradProject')?.scrollIntoView({block:'center'})});
+ document.querySelectorAll('[data-g-cancel]').forEach(b=>b.onclick=()=>{gradEditing='';render()});
+ document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>{const p=find(b.dataset.gDel);if(p&&confirm('حذف البحث «'+(p.title||gradStudents(p).join('، '))+'»؟')){const g=gradEdit();g.projects=g.projects.filter(x=>x.id!==p.id);if(gradEditing===p.id)gradEditing='';commit('تم حذف البحث')}});
  const q=$('#gq');if(q)q.onchange=()=>{gf.q=q.value;render()};
  [['gstudy','study'],['gsup','sup'],['gstatus','status']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.onchange=()=>{gf[k]=el.value;render()}});
 }
@@ -2043,7 +2074,7 @@ function generateSchedule(){
 function action(a){
 if(a==='exitView')return setViewAs('');if(a==='notif')return enableNotif();if(a==='install')return installApp();if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
 if(a==='gradImport'){const i=$('#gradFile');i.value='';i.onchange=()=>gradImport(i.files[0]);i.click()}if(a==='gradTemplate')gradTemplate();if(a==='taskExcel')taskExcel();if(a==='gradExcel')gradExcel();
-if(a==='gradClear'&&confirm('حذف كل طلبة بحوث التخرج من القائمة؟ (يمكن استعادتهم من نقاط الاسترجاع)')){gradEdit().students=[];commit('حُذفت القائمة')}
+if(a==='gradClear'&&confirm('حذف كل بحوث التخرج من القائمة؟ (يمكن استعادتها من نقاط الاسترجاع)')){gradEdit().projects=[];gradEditing='';commit('حُذفت القائمة')}
 if(a==='backup'||a==='backupFull')backupFull();if(a==='backupExcel')backupExcel();
 if(a==='snapNow'){prot.busy='جارٍ إنشاء نقطة استرجاع…';render();makeSnap('يدوية').then(()=>{prot.busy='';render();toast('تم حفظ نقطة استرجاع')}).catch(e=>{prot.busy='';if(e.code==='permission-denied')prot.denied=true;render();toast('تعذر الحفظ: '+e.message)})}
 if(a==='logRefresh'){prot.log=null;loadProtection()}if(a==='logMore'){prot.logLimit+=100;loadProtection()}
