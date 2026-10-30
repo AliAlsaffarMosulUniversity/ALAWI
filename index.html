@@ -59,6 +59,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 select[data-g-sup]{min-width:160px}select[data-g-status]{min-width:125px}
 .install-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.install-steps ol{margin:6px 0;padding-inline-start:20px;line-height:1.9}
 .app-hint{margin:8px 0}
+.ts-filters label{display:flex;align-items:center;gap:6px}.ts-filters input,.ts-filters select{width:auto}
+.ts-period{font-weight:600;color:var(--primary);margin:6px 0}
+.ts-cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.ts-cards .ts-ok b{color:var(--ok)}.ts-cards .ts-warn b{color:var(--warn)}
+.ts-h{font-size:15px;margin:18px 0 6px}.nw{white-space:nowrap}
+.ts-bar{display:inline-block;width:70px;height:8px;border-radius:6px;background:var(--line);vertical-align:middle;overflow:hidden}.ts-bar i{display:block;height:100%;background:var(--ok);border-radius:6px}
 #notifBtn.notif-off{filter:grayscale(1);opacity:.75}
 .card.stat{cursor:default}.card.stat:hover{border-color:var(--line)}.card.stat b{font-size:20px}
 section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:20px;box-shadow:var(--shadow)}
@@ -1419,9 +1424,95 @@ function invigilationView(){
   +(admin?'<details class="section-like"><summary>مراقبات فردية أخرى ('+db.invigilation.length+')</summary>'+section(formTitle('invigilation','إضافة مراقبة فردية','تعديل مراقبة'),form('invigilation',teacherField()+field('date','التاريخ','date')+field('exam','الامتحان','text',false)+field('start','البداية','time',false)+field('end','النهاية','time',false)+field('room','القاعة','text',false),'إضافة المراقبة'))
    +section('المراقبات الفردية',table(['الامتحان','التدريسي','التاريخ','الوقت','القاعة',''],db.invigilation.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>[esc(x.exam),nameTag(x.teacher),esc(x.date),x.start||x.end?'<span dir="ltr">'+esc(x.start||'?')+' – '+esc(x.end||'?')+'</span>':'—',esc(x.room||'—'),actions('invigilation',x.id)])))+'</details>':'');
 }
+// ===== التكليفات وإحصائيتها =====
+// كل تكليف يحفظ تاريخ إسناده (assigned) وتاريخ إنجازه (doneAt). التكليفات القديمة قبل هذه الإضافة
+// يُؤخذ تاريخ إسنادها من وقت إنشائها، وإنجازها المسجّل دون تاريخ يُحسب بآخر موعد ثم بتاريخ الإسناد.
+const isoOf=ms=>ms?new Date(ms).toLocaleDateString('en-CA'):'';
+const taskAssigned=t=>t.assigned||isoOf(t.createdAt)||'';
+const taskDoneOn=t=>t.done?(t.doneAt||t.due||taskAssigned(t)):'';
+const dt=v=>v?'<span class="nw" dir="ltr">'+esc(v)+'</span>':'—';
+const daysBetween=(a,b)=>a&&b?Math.round((new Date(b+'T00:00')-new Date(a+'T00:00'))/864e5):null;
+const taskLate=t=>t.done?!!(t.due&&taskDoneOn(t)>t.due):overdue(t);
+function taskState(t){return t.done?(taskLate(t)?['warn','أُنجزت متأخرة']:['ok','أُنجزت في موعدها']):overdue(t)?['danger','متأخرة']:['info','قيد الإنجاز']}
+// فترات جاهزة: العام الدراسي يبدأ في أيلول، والفصل الثاني في شباط
+function periodRange(k){
+ const d=new Date(),y=d.getFullYear(),m=d.getMonth(),iso=x=>x.toLocaleDateString('en-CA'),ay=m>=8?y:y-1;
+ if(k==='week'){const s=new Date(d);s.setDate(d.getDate()-d.getDay());return [iso(s),iso(d)]}
+ if(k==='month')return [iso(new Date(y,m,1)),iso(d)];
+ if(k==='lastMonth')return [iso(new Date(y,m-1,1)),iso(new Date(y,m,0))];
+ if(k==='term')return m>=8?[ay+'-09-01',iso(d)]:m<1?[ay+'-09-01',iso(d)]:[y+'-02-01',iso(d)];
+ if(k==='year')return [ay+'-09-01',iso(d)];
+ return ['',''];
+}
+const PERIODS=[['week','هذا الأسبوع'],['month','هذا الشهر'],['lastMonth','الشهر الماضي'],['term','الفصل الحالي'],['year','العام الدراسي'],['all','كل الفترات']];
+let ts={period:'month',from:'',to:'',teacher:'',status:''};
+(()=>{const [a,b]=periodRange('month');ts.from=a;ts.to=b})();
+const inRange=(d,a,b)=>!!d&&(!a||d>=a)&&(!b||d<=b);
+// تكليفات الفترة: ما أُسند فيها أو أُنجز فيها
+function periodTasks(){
+ const {from:a,to:b}=ts;
+ return db.tasks.filter(t=>(!ts.teacher||t.teacher===ts.teacher)&&(inRange(taskAssigned(t),a,b)||inRange(taskDoneOn(t),a,b)||!a&&!b))
+  .filter(t=>{if(!ts.status)return true;const st=t.done?(taskLate(t)?'late':'ontime'):overdue(t)?'overdue':'open';return st===ts.status||ts.status==='done'&&t.done});
+}
+function taskStats(list){
+ const {from:a,to:b}=ts,assigned=list.filter(t=>!a&&!b||inRange(taskAssigned(t),a,b)),done=list.filter(t=>t.done&&(!a&&!b||inRange(taskDoneOn(t),a,b)));
+ const onTime=done.filter(t=>!taskLate(t)).length,late=done.length-onTime,open=list.filter(t=>!t.done),over=open.filter(overdue).length;
+ const durs=done.map(t=>daysBetween(taskAssigned(t),taskDoneOn(t))).filter(x=>x!=null&&x>=0);
+ const per={};
+ list.forEach(t=>{const o=per[t.teacher]??={assigned:0,done:0,onTime:0,late:0,open:0,over:0,days:[]};
+  if(!a&&!b||inRange(taskAssigned(t),a,b))o.assigned++;
+  if(t.done&&(!a&&!b||inRange(taskDoneOn(t),a,b))){o.done++;taskLate(t)?o.late++:o.onTime++;const x=daysBetween(taskAssigned(t),taskDoneOn(t));if(x!=null&&x>=0)o.days.push(x)}
+  if(!t.done){o.open++;if(overdue(t))o.over++}});
+ const assignedDone=assigned.filter(t=>t.done).length;
+ return {assigned:assigned.length,done:done.length,onTime,late,open:open.length,over,rate:assigned.length?Math.round(assignedDone/assigned.length*100):null,
+  punct:done.length?Math.round(onTime/done.length*100):null,avg:durs.length?Math.round(durs.reduce((x,y)=>x+y,0)/durs.length*10)/10:null,per};
+}
+const pct=v=>v==null?'—':v+'%';
+const avgOf=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10:null;
+function periodLabel(){const p=PERIODS.find(x=>x[0]===ts.period);return (ts.from||ts.to?(p?p[1]+' · ':'')+'من '+(ts.from||'البداية')+' إلى '+(ts.to||'اليوم'):'كل الفترات')+(ts.teacher?' · '+name(ts.teacher):'')}
+function taskStatsSection(){
+ const list=periodTasks(),st=taskStats(list),per=Object.entries(st.per).sort((x,y)=>y[1].done-x[1].done||y[1].assigned-x[1].assigned);
+ const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(l)+'</option>';
+ const tids=[...new Set(db.tasks.map(t=>t.teacher).filter(Boolean))].sort((x,y)=>name(x).localeCompare(name(y),'ar'));
+ const filters='<div class="tools ts-filters">'+PERIODS.map(([k,l])=>'<button type="button" class="btn-sm '+(ts.period===k?'':'secondary')+'" data-ts-period="'+k+'">'+l+'</button>').join('')+'</div>'
+  +'<div class="tools ts-filters"><label>من<input type="date" id="tsFrom" value="'+esc(ts.from)+'"></label><label>إلى<input type="date" id="tsTo" value="'+esc(ts.to)+'"></label>'
+  +'<label>التدريسي<select id="tsTeacher">'+opt('','كل التدريسيين',ts.teacher)+tids.map(id=>opt(id,name(id),ts.teacher)).join('')+'</select></label>'
+  +'<label>الحالة<select id="tsStatus">'+opt('','كل الحالات',ts.status)+opt('done','المنفذة',ts.status)+opt('ontime','منفذة في موعدها',ts.status)+opt('late','منفذة متأخرة',ts.status)+opt('overdue','متأخرة لم تُنفذ',ts.status)+opt('open','قيد الإنجاز',ts.status)+'</select></label>'
+  +'<button class="secondary" data-r-print>🖨️ طباعة الإحصائية</button><button class="secondary" data-action="taskExcel">📊 Excel</button></div>';
+ const cards='<div class="cards ts-cards">'+[['المهام المنفذة',st.done,'ok'],['منفذة في موعدها',st.onTime,'ok'],['منفذة متأخرة',st.late,st.late?'warn':''],['مسندة في الفترة',st.assigned,''],['متأخرة لم تُنفذ',st.over,st.over?'danger':''],['نسبة الإنجاز',pct(st.rate),''],['الالتزام بالموعد',pct(st.punct),''],['متوسط مدة التنفيذ',st.avg==null?'—':st.avg+' يوم','']].map(([l,v,c])=>'<div class="card stat '+(c==='danger'?'danger':'')+' ts-'+c+'"><small>'+l+'</small><b>'+v+'</b></div>').join('')+'</div>';
+ const perT=per.length?table(['التدريسي','المسندة','المنفذة','في موعدها','متأخرة التنفيذ','لم تُنفذ','منها متأخرة','نسبة الإنجاز','متوسط المدة'],per.map(([id,o])=>{const r=o.assigned?Math.round(Math.min(o.done,o.assigned)/o.assigned*100):null;return [avatar(id,'sm')+' '+esc(name(id)),o.assigned,'<b>'+o.done+'</b>',o.onTime,o.late||'0',o.open,o.over?pill('danger',o.over):'0',r==null?'—':'<span class="ts-bar"><i style="width:'+r+'%"></i></span> '+r+'%',avgOf(o.days)==null?'—':avgOf(o.days)+' يوم']})):'<p class="empty">لا توجد تكليفات في هذه الفترة.</p>';
+ const details=list.length?table(['ت','المهمة','التدريسي','تاريخ التكليف','آخر موعد','تاريخ التنفيذ','المدة','الحالة'],list.slice().sort((x,y)=>String(taskDoneOn(y)||taskAssigned(y)).localeCompare(taskDoneOn(x)||taskAssigned(x))).map((t,i)=>{const [c,l]=taskState(t),dd=daysBetween(taskAssigned(t),taskDoneOn(t));return [i+1,'<b>'+esc(t.title)+'</b>'+(t.details?'<br><small class="muted">'+esc(t.details)+'</small>':''),esc(name(t.teacher)),dt(taskAssigned(t)),dt(t.due),t.done?dt(taskDoneOn(t))+(t.doneAt?'':' <small class="muted">(تقديري)</small>'):'—',dd!=null&&dd>=0?'<span class="nw">'+dd+' يوم</span>':'—',pill(c,l)]})):'';
+ return section('📊 إحصائية تنفيذ المهام','<p class="muted">اختر الفترة لمعرفة عدد المهام المنفذة خلالها، ومن نفّذها، وهل نُفذت في موعدها. تُحسب المهمة منفذة في الفترة حسب تاريخ تسجيل إنجازها.</p>'+filters+'<p class="ts-period">📅 '+esc(periodLabel())+'</p>'+cards
+  +'<h3 class="ts-h">حسب التدريسي</h3>'+perT+(details?'<h3 class="ts-h">تفاصيل التكليفات ('+list.length+')</h3>'+details:''))
+  +'<div class="r-report">'+taskReport(list,st,per)+'</div>';
+}
+function taskReport(list,st,per){
+ const t=(head,rows)=>'<table class="rr-t"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+ return '<div class="rr-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>إحصائية تنفيذ المهام والتكليفات</h2><span>الفترة: '+esc(periodLabel())+' · تاريخ الإعداد: '+today()+'</span></div></div>'
+  +'<h3>المؤشرات</h3>'+t(['المهام المنفذة','في موعدها','متأخرة التنفيذ','المسندة في الفترة','متأخرة لم تُنفذ','نسبة الإنجاز','الالتزام بالموعد','متوسط مدة التنفيذ'],[[st.done,st.onTime,st.late,st.assigned,st.over,pct(st.rate),pct(st.punct),st.avg==null?'—':st.avg+' يوم']])
+  +(per.length?'<h3>حسب التدريسي</h3>'+t(['ت','التدريسي','المسندة','المنفذة','في موعدها','متأخرة التنفيذ','لم تُنفذ','نسبة الإنجاز'],per.map(([id,o],i)=>[i+1,esc(name(id)),o.assigned,'<b>'+o.done+'</b>',o.onTime,o.late,o.open,o.assigned?Math.round(Math.min(o.done,o.assigned)/o.assigned*100)+'%':'—'])):'')
+  +'<h3>تفاصيل التكليفات ('+list.length+')</h3>'+(list.length?t(['ت','المهمة','التفاصيل','التدريسي','تاريخ التكليف','آخر موعد','تاريخ التنفيذ','الحالة'],list.map((x,i)=>[i+1,esc(x.title),esc(x.details||'—'),esc(name(x.teacher)),esc(taskAssigned(x)||'—'),esc(x.due||'—'),x.done?esc(taskDoneOn(x)):'—',taskState(x)[1]])):'<p>لا توجد تكليفات في هذه الفترة.</p>')
+  +'<div class="rr-sign"><span>رئيس القسم: ..............................</span><span>التوقيع: ....................</span><span>التاريخ: '+today()+'</span></div>';
+}
+async function taskExcel(){
+ try{
+  const X=await getSheetJs(),b=X.utils.book_new(),list=periodTasks(),st=taskStats(list);
+  X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['إحصائية تنفيذ المهام'],['الفترة',periodLabel()],[],['المهام المنفذة',st.done],['منفذة في موعدها',st.onTime],['منفذة متأخرة',st.late],['مسندة في الفترة',st.assigned],['متأخرة لم تُنفذ',st.over],['نسبة الإنجاز',pct(st.rate)],['الالتزام بالموعد',pct(st.punct)],['متوسط مدة التنفيذ (يوم)',st.avg??'']]),'الملخص');
+  X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['التدريسي','المسندة','المنفذة','في موعدها','متأخرة التنفيذ','لم تُنفذ','منها متأخرة','نسبة الإنجاز','متوسط المدة (يوم)'],...Object.entries(st.per).map(([id,o])=>[name(id),o.assigned,o.done,o.onTime,o.late,o.open,o.over,o.assigned?Math.round(Math.min(o.done,o.assigned)/o.assigned*100)+'%':'',avgOf(o.days)??''])]),'حسب التدريسي');
+  X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['المهمة','التفاصيل','التدريسي','تاريخ التكليف','آخر موعد','تاريخ التنفيذ','المدة (يوم)','الحالة'],...list.map(t=>[t.title,t.details||'',name(t.teacher),taskAssigned(t),t.due||'',taskDoneOn(t),t.done?daysBetween(taskAssigned(t),taskDoneOn(t))??'':'',taskState(t)[1]])]),'التفاصيل');
+  X.writeFile(b,'إحصائية-المهام-'+today()+'.xlsx');
+ }catch(e){toast(e.message)}
+}
+function bindTaskStats(){
+ document.querySelectorAll('[data-ts-period]').forEach(x=>x.onclick=()=>{ts.period=x.dataset.tsPeriod;[ts.from,ts.to]=periodRange(ts.period);render()});
+ const f=$('#tsFrom'),t=$('#tsTo');if(f)f.onchange=()=>{ts.from=f.value;ts.period='custom';render()};if(t)t.onchange=()=>{ts.to=t.value;ts.period='custom';render()};
+ const te=$('#tsTeacher');if(te)te.onchange=()=>{ts.teacher=te.value;render()};
+ const ss=$('#tsStatus');if(ss)ss.onchange=()=>{ts.status=ss.value;render()};
+}
 function tasksView(){
- return (isAdmin()?section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('due','آخر موعد','date',false),'إضافة التكليف')):'')
- +section(isAdmin()?'التكليفات':'مهامي',table(['المهمة','التدريسي','الموعد','الحالة',''],db.tasks.filter(t=>isAdmin()||t.teacher===person).sort((a,b)=>(a.done-b.done)||String(a.due||'9999').localeCompare(b.due||'9999')).map(t=>[esc(t.title),esc(name(t.teacher)),esc(t.due||'—'),t.done?pill('ok','مكتملة'):overdue(t)?pill('danger','متأخرة'):pill('info','قيد الإنجاز'),(isAdmin()?'<span class="row-actions"><button class="btn-sm" data-done="'+t.id+'">'+(t.done?'إعادة فتح':'تسجيل الإنجاز')+'</button>'+actions('task',t.id)+'</span>':'')])));
+ const admin=isAdmin();
+ return (admin?taskStatsSection():'')+(admin?section(formTitle('task','تكليف جديد','تعديل التكليف'),form('task',field('title','عنوان المهمة')+teacherField()+field('assigned','تاريخ التكليف','date',false)+field('due','آخر موعد','date',false)+'<label class="full">تفاصيل التكليف (اختياري)<textarea name="details" placeholder="مثل: رقم الكتاب، الجهة الطالبة، المطلوب تسليمه"></textarea></label>','إضافة التكليف')):'')
+ +section(admin?'كل التكليفات':'مهامي',table(['المهمة','التدريسي','تاريخ التكليف','الموعد','تاريخ التنفيذ','الحالة',''],db.tasks.filter(t=>admin||t.teacher===person).sort((a,b)=>(a.done-b.done)||String(a.due||'9999').localeCompare(b.due||'9999')).map(t=>{const [c,l]=taskState(t);return ['<b>'+esc(t.title)+'</b>'+(t.details?'<br><small class="muted">'+esc(t.details)+'</small>':''),esc(name(t.teacher)),dt(taskAssigned(t)),dt(t.due),t.done?dt(taskDoneOn(t)):'—',pill(c,l),(admin?'<span class="row-actions"><button class="btn-sm" data-done="'+t.id+'">'+(t.done?'إعادة فتح':'تسجيل الإنجاز')+'</button>'+actions('task',t.id)+'</span>':'')]})));
 }
 function committeesView(){
  return (isAdmin()?section(formTitle('committee','تشكيل لجنة','تعديل اللجنة'),db.teachers.length?form('committee',field('title','اسم اللجنة')+teacherField('chair','رئيس اللجنة',false)+'<fieldset class="full"><legend>أعضاء اللجنة</legend>'+checks('members',db.teachers.map(t=>[t.id,t.name]))+'</fieldset><label class="full">مهام اللجنة<textarea name="mission"></textarea></label>','تشكيل اللجنة'):'<p class="empty">أضف التدريسيين أولاً.</p>'):'')
@@ -1755,6 +1846,7 @@ $('#view').innerHTML=(viewAs?'<div class="alert ok preview-bar"><span>👁️ '+
 if(page===9)bindAdmin();
 if(page===8)bindProtection();
 if(page===13)bindGrad();
+if(page===5&&isAdmin())bindTaskStats();
 syncPwaButtons();
 document.querySelectorAll('[data-share]').forEach(b=>b.onclick=()=>{const [k,id]=b.dataset.share.split('|');shareAnn(k,id)});
 if(page===10)bindWorkload();
@@ -1794,11 +1886,11 @@ bind('research',d=>{const ed=editId('research'),own=!isAdmin();if(own&&!person)r
  const rec={teacher:own?person:d.teacher,title:d.title.trim(),indexing:d.indexing,date:d.date,status:d.status,type:d.type,quartile:d.quartile,journal:d.journal.trim(),authorRole:d.authorRole,coauthors:d.coauthors.trim(),link:d.link.trim(),doi:d.doi.trim(),impact:d.impact};
  if(own&&ed&&db.research.find(r=>r.id===ed)?.teacher!==person)return toast('لا يمكنك تعديل بحث غيرك');
  upsert('research',rec);commit(ed?'تم حفظ التعديل':'✓ أُضيف البحث')});
-bind('task',d=>{const ed=editId('task');upsert('task',ed?{title:d.title.trim(),teacher:d.teacher,due:d.due}:{title:d.title.trim(),teacher:d.teacher,due:d.due,done:false});commit(ed?'تم حفظ التعديل':'تمت إضافة التكليف')});
+bind('task',d=>{const ed=editId('task'),base={title:d.title.trim(),teacher:d.teacher,due:d.due,details:d.details.trim(),assigned:d.assigned||(ed?db.tasks.find(t=>t.id===ed)?.assigned||'':today())};if(base.due&&base.assigned&&base.due<base.assigned)return toast('آخر موعد يجب أن يكون بعد تاريخ التكليف');upsert('task',ed?base:{...base,done:false});commit(ed?'تم حفظ التعديل':'تمت إضافة التكليف')});
 bind('committee',(d,f)=>{const members=new FormData(f).getAll('members');const ed=editId('committee');upsert('committee',{title:d.title.trim(),chair:d.chair,members,mission:d.mission.trim()});commit(ed?'تم حفظ التعديل':'تم تشكيل اللجنة')});
 bind('poll',d=>{const ed=editId('poll');upsert('poll',ed?{question:d.question.trim()}:{question:d.question.trim(),answers:[]});commit(ed?'تم حفظ التعديل':'تمت إضافة السؤال')});
 db.polls.forEach(p=>bind('answer-'+p.id,d=>{if(previewOther())return toast('معاينة فقط: لا يمكن الإجابة نيابة عن التدريسي');const a=p.answers.find(a=>a.teacher===d.teacher);if(a)a.answer=d.answer;else p.answers.push({teacher:d.teacher,answer:d.answer});commit('تم حفظ الإجابة')}));
-document.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>{const t=db.tasks.find(t=>t.id===b.dataset.done);t.done=!t.done;commit(t.done?'سُجّل إنجاز المهمة':'أُعيد فتح المهمة')});
+document.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>{const t=db.tasks.find(t=>t.id===b.dataset.done);t.done=!t.done;if(t.done)t.doneAt=today();else delete t.doneAt;commit(t.done?'سُجّل إنجاز المهمة بتاريخ اليوم':'أُعيد فتح المهمة')});
 document.querySelectorAll('[data-read]').forEach(b=>b.onclick=()=>{if(previewOther())return toast('معاينة فقط: لا يمكن تأكيد القراءة نيابة عن التدريسي');const a=db.announcements.find(a=>a.id===b.dataset.read);if(!a.read.includes(person))a.read.push(person);commit(db.announcements.every(x=>x.read.includes(person))?'🎉 أحسنت! قرأت كل التبليغات':'تم تأكيد القراءة ✓')});
 if($('#scheduleFilter')){$('#scheduleFilter').value=scheduleFilter;$('#scheduleFilter').onchange=e=>{scheduleFilter=e.target.value;render()}}
 bind('restore',async(d,f)=>{let x;try{x=JSON.parse(await f.elements.file.files[0].text())}catch{return toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}const data=x?.app==='smart-department'?x.data:x;restoreData(data||{},x?.files||null,'النسخة '+(x?.exportedAt?new Date(x.exportedAt).toLocaleDateString('ar-IQ'):f.elements.file.files[0].name))});
@@ -1894,7 +1986,7 @@ function generateSchedule(){
 }
 function action(a){
 if(a==='exitView')return setViewAs('');if(a==='notif')return enableNotif();if(a==='install')return installApp();if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
-if(a==='gradImport'){const i=$('#gradFile');i.value='';i.onchange=()=>gradImport(i.files[0]);i.click()}if(a==='gradTemplate')gradTemplate();if(a==='gradExcel')gradExcel();
+if(a==='gradImport'){const i=$('#gradFile');i.value='';i.onchange=()=>gradImport(i.files[0]);i.click()}if(a==='gradTemplate')gradTemplate();if(a==='taskExcel')taskExcel();if(a==='gradExcel')gradExcel();
 if(a==='gradClear'&&confirm('حذف كل طلبة بحوث التخرج من القائمة؟ (يمكن استعادتهم من نقاط الاسترجاع)')){gradEdit().students=[];commit('حُذفت القائمة')}
 if(a==='backup'||a==='backupFull')backupFull();if(a==='backupExcel')backupExcel();
 if(a==='snapNow'){prot.busy='جارٍ إنشاء نقطة استرجاع…';render();makeSnap('يدوية').then(()=>{prot.busy='';render();toast('تم حفظ نقطة استرجاع')}).catch(e=>{prot.busy='';if(e.code==='permission-denied')prot.denied=true;render();toast('تعذر الحفظ: '+e.message)})}
