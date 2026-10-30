@@ -44,6 +44,17 @@ service cloud.firestore {
       allow delete: if isAdmin() || ownsTeacher(resource.data.teacher);
     }
 
+    // نقاط الاسترجاع التلقائية: لرئيس القسم والمشرفين فقط
+    match /backups/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // سجل التغييرات: يكتب كل مستخدم سجل تعديلاته باسمه، ويقرؤه المشرفون، ولا يُعدَّل ولا يُحذف أبداً
+    match /audit/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && request.resource.data.email == myEmail();
+    }
+
     // العبء التدريسي: لرئيس القسم والمشرفين فقط
     match /workloads/{id} {
       allow read, write: if isAdmin();

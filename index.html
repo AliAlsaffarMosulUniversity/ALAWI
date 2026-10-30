@@ -52,6 +52,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .card small{color:var(--muted);font-size:13px}
 .card b{font-size:32px;display:block;margin-top:8px;font-variant-numeric:tabular-nums}
 .card.danger b{color:var(--danger)}
+.card.stat{cursor:default}.card.stat:hover{border-color:var(--line)}.card.stat b{font-size:20px}
 section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:20px;box-shadow:var(--shadow)}
 section.editing{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
@@ -480,7 +481,7 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
 <script>
 'use strict';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','النسخ الاحتياطي','الإدارة واستيراد Excel','العبء التدريسي','البحث الأكاديمي','الكتب الإدارية'];
+const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','الحماية والنسخ الاحتياطي','الإدارة واستيراد Excel','العبء التدريسي','البحث الأكاديمي','الكتب الإدارية'];
 const navGroups=[['الرئيسية',[0]],['الكادر',[1,6]],['التدريس',[3,4,10]],['البحث العلمي',[11]],['التواصل والمتابعة',[2,12,5,7]],['البيانات',[9,8]]];
 const key='smart-department-v1';
 const initial={teachers:[],announcements:[],courses:[],schedule:[],invigilation:[],tasks:[],committees:[],polls:[],research:[]};
@@ -563,9 +564,8 @@ function teacherRefs(id){return [['مادة',db.courses.filter(c=>c.teacher===id
 function remove(f,id){
  const col=COLS[f];
  if(col==='teachers'){const refs=teacherRefs(id);if(refs.length)return toast('لا يمكن حذف التدريسي لارتباطه بـ: '+refs.map(([l,n])=>n+' '+l).join('، ')+'. احذفها أو انقلها أولاً.')}
- if(!confirm('حذف هذا السجل نهائياً من هذا المتصفح؟'))return;
+ if(!confirm(cloud.on?'حذف هذا السجل؟ يمكن استعادته لاحقاً من صفحة «الحماية والنسخ الاحتياطي».':'حذف هذا السجل نهائياً من هذا المتصفح؟'))return;
  if(col==='research'&&cloud.on&&!isAdmin()){const r=db.research.find(x=>x.id===id);if(r){r.deleted=true;if(editing?.id===id)editing=null;commit('تم حذف البحث')}return}
- if(col==='announcements')attachList(db.announcements.find(x=>x.id===id)||{}).forEach(deleteChunks);
  db[col]=db[col].filter(x=>x.id!==id);if(editing?.id===id)editing=null;
  if(col==='courses'||col==='teachers')db.scheduleStale=true;
  commit('تم الحذف');
@@ -646,6 +646,8 @@ function dashboard(){
  const alerts=[];
  if(late.length)alerts.push(['danger',late.length+' مهمة متأخرة عن موعدها',5,'عرض التكليفات']);
  if(noDays.length)alerts.push(['warn',noDays.length+' تدريسي بلا أيام تواجد؛ لن تُدرج موادهم في الجدول',1,'استكمال البيانات']);
+ if(cloud.on&&prot.denied)alerts.push(['warn','النسخ الاحتياطي التلقائي متوقف: قواعد الحماية في Firebase تحتاج تحديثاً',8,'التفاصيل']);
+ else if(db.teachers.length&&Date.now()-lastLocalBackup()>30*864e5)alerts.push(['warn','لم تنزّل نسخة احتياطية على جهازك منذ أكثر من شهر',8,'تنزيل نسخة']);
  if(db.scheduleStale&&db.schedule.length)alerts.push(['warn','تغيّرت المواد أو التدريسيون بعد آخر توليد للجدول',3,'إعادة التوليد']);
  return migrate+'<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
  +alerts.map(([c,t,p,l])=>'<div class="alert '+c+'"><span>'+t+'</span><button data-page="'+p+'">'+l+'</button></div>').join('')
@@ -1344,9 +1346,176 @@ function pollsView(){
  return (isAdmin()?section(formTitle('poll','طرح سؤال','تعديل السؤال'),form('poll',field('question','السؤال','text',true,'full'),'إضافة السؤال')):'')
  +section('الأسئلة والإجابات',db.polls.map(p=>'<div class="item"><div class="item-head"><h3>'+esc(p.question)+'</h3>'+actions('poll',p.id)+'</div><p class="muted">'+p.answers.length+' إجابة من '+db.teachers.length+' تدريسي</p>'+(isAdmin()?form('answer-'+p.id,teacherField()+field('answer','الإجابة'),'حفظ الإجابة'):person?form('answer-'+p.id,'<input type="hidden" name="teacher" value="'+esc(person)+'">'+field('answer','إجابتك'),'حفظ إجابتي'):'')+table(['التدريسي','الإجابة'],p.answers.map(a=>[esc(name(a.teacher)),esc(a.answer)]))+'</div>').join('')||'<p class="empty">لا توجد أسئلة</p>');
 }
+// ===== الحماية: نقاط استرجاع تلقائية في السحابة، وسجل تغييرات لا يُحذف، ونسخة كاملة على الجهاز =====
+// النقاط والسجل في مجموعتي backups و audit (قواعد firestore.rules): يقرؤهما المشرفون فقط، والسجل لا يُعدَّل ولا يُحذف.
+const SNAP_KEEP=20,SNAP_EVERY=864e5,BULK_DEL=10;
+const COUNT_KEYS=[['teachers','تدريسي'],['announcements','تبليغ'],['courses','مادة'],['research','بحث'],['schedule','حصة'],['tasks','تكليف'],['committees','لجنة'],['polls','سؤال'],['letters','كتاب'],['workloads','عبء']];
+const LOG_COLS={teachers:'تدريسي',announcements:'تبليغ',courses:'مادة',invigilation:'مراقبة',tasks:'تكليف',committees:'لجنة',polls:'سؤال',workloads:'عبء تدريسي',answers:'إجابة',research:'بحث',meta:'إعدادات'};
+const META_LABELS={schedule:'الجداول الدراسية',ttSections:'شعب الجداول',examPlan:'خطة المراقبات',ttPlans:'الخطط الدراسية',ttTerm:'الفصل الدراسي',letters:'الكتب الإدارية',letterCfg:'إعدادات الكتب',workloadMeta:'إعدادات العبء التدريسي'};
+const LOG_ACTS={add:['ok','إضافة'],edit:['info','تعديل'],del:['danger','حذف']};
+const prot={snaps:null,log:null,logLimit:100,loading:false,denied:false,busy:'',filter:''};
+const lastLocalBackup=()=>{try{return Number(localStorage.getItem('smart-department-lastbackup'))||0}catch{return 0}};
+const fmtTime=t=>t?new Date(t).toLocaleString('ar-IQ',{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+const agoText=t=>{if(!t)return 'لم تُنشأ بعد';const h=Math.floor((Date.now()-t)/36e5);return h<1?'قبل أقل من ساعة':h<24?'قبل '+h+' ساعة':'قبل '+Math.floor(h/24)+' يوم'};
+const countsOf=x=>Object.fromEntries(COUNT_KEYS.map(([k])=>[k,(x?.[k]||[]).length]));
+const countsText=c=>COUNT_KEYS.filter(([k])=>c?.[k]).map(([k,l])=>c[k]+' '+l).join(' · ')||'فارغة';
+function whoAmI(){const e=(cloud.user?.email||'').toLowerCase();return db.teachers.find(t=>(t.email||'').trim().toLowerCase()===e)?.name||e}
+async function gz(str){return new Uint8Array(await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer())}
+async function gunzip(parts){return new Response(new Blob(parts).stream().pipeThrough(new DecompressionStream('gzip'))).text()}
+const toB64=u8=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(String(f.result).split(',')[1]||'');f.readAsDataURL(new Blob([u8]))});
+const fromB64=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
+function chunkedFiles(x){const out=[];(function walk(v){if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object'){if(typeof v.ref==='string'&&v.ref.startsWith('f_')&&v.chunks>0)out.push(v);else Object.values(v).forEach(walk)}})(x);return out}
+
+// ---------- نقاط الاسترجاع ----------
+async function listSnaps(){
+ const {collection,query,where,getDocs}=cloud.sdk;
+ const q=await getDocs(query(collection(cloud.fs,'backups'),where('kind','==','snap')));
+ return q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.t-a.t);
+}
+async function makeSnap(reason){
+ const {doc,setDoc,deleteDoc,Bytes}=cloud.sdk,bytes=await gz(JSON.stringify(db)),n=Math.max(1,Math.ceil(bytes.length/CHUNK)),id='s'+Date.now();
+ for(let i=0;i<n;i++)await setDoc(doc(cloud.fs,'backups',id+'_'+i),{kind:'part',data:Bytes.fromUint8Array(bytes.subarray(i*CHUNK,(i+1)*CHUNK))});
+ await setDoc(doc(cloud.fs,'backups',id),{kind:'snap',t:Date.now(),email:(cloud.user?.email||'').toLowerCase(),who:whoAmI(),reason,chunks:n,size:bytes.length,counts:countsOf(db)});
+ const list=await listSnaps();
+ for(const x of list.slice(SNAP_KEEP)){for(let i=0;i<x.chunks;i++)deleteDoc(doc(cloud.fs,'backups',x.id+'_'+i)).catch(()=>{});deleteDoc(doc(cloud.fs,'backups',x.id)).catch(()=>{})}
+ prot.snaps=list.slice(0,SNAP_KEEP);
+ return id;
+}
+async function readSnap(x){
+ const {doc,getDoc}=cloud.sdk,parts=[];
+ for(let i=0;i<x.chunks;i++){const d=await getDoc(doc(cloud.fs,'backups',x.id+'_'+i));if(!d.exists())throw Error('جزء مفقود من النسخة');parts.push(d.data().data.toUint8Array())}
+ return JSON.parse(await gunzip(parts));
+}
+// تُنشأ نقطة تلقائية مرة كل يوم عند دخول أي مشرف، ويُحتفظ بآخر 20 نقطة
+async function autoSnap(){
+ if(!cloud.on||!cloud.admin||prot.autoDone)return;prot.autoDone=true;
+ try{const list=await listSnaps();prot.snaps=list;if(!list[0]||Date.now()-list[0].t>SNAP_EVERY)await makeSnap('تلقائية يومية');if(page===8)render()}
+ catch(e){if(e.code==='permission-denied'){prot.denied=true;if(page===0||page===8)render()}}
+}
+async function loadProtection(){
+ if(!cloud.on||!cloud.admin||prot.loading)return;prot.loading=true;
+ try{
+  const {collection,query,orderBy,limit,getDocs}=cloud.sdk;
+  const [snaps,log]=await Promise.all([listSnaps(),getDocs(query(collection(cloud.fs,'audit'),orderBy('t','desc'),limit(prot.logLimit)))]);
+  prot.snaps=snaps;prot.log=log.docs.map(d=>({id:d.id,...d.data()}));prot.denied=false;
+ }catch(e){if(e.code==='permission-denied')prot.denied=true;else toast('تعذر تحميل سجل الحماية: '+e.message);prot.snaps??=[];prot.log??=[]}
+ prot.loading=false;if(page===8)render();
+}
+
+// ---------- سجل التغييرات ----------
+function recLabel(r){
+ if(!r)return '';
+ if(r.kind==='research')return r.data?.title||'بحث';
+ return String(r.name||r.title||r.question||r.course||r.subject||r.answer||'').slice(0,90);
+}
+// يُبنى من الفروق التي تُرسل فعلاً إلى السحابة، فيُسجَّل كل تعديل أياً كانت الصفحة التي جاء منها.
+// المحذوف يُحفظ نصه كاملاً في السجل لتمكن استعادته بضغطة.
+function auditChanges(ops){
+ const out=[];let room=600000;
+ for(const [t,c,id,s,prev] of ops){
+  if(c==='reads')continue;
+  if(c==='meta'){if(!prev)continue;const a=JSON.parse(prev),b=JSON.parse(s||'{}'),n=v=>stable(v==null||typeof v==='object'&&!Object.keys(v).length?null:v);for(const k in META_LABELS)if(n(a[k])!==n(b[k]))out.push({c:'meta',id:k,a:'edit',label:META_LABELS[k]});continue}
+  const rec=JSON.parse((t==='del'?prev:s)||'null'),gone=t==='del'||rec?.deleted;
+  const e={c:rec?.kind==='research'?'research':c,id,a:gone?'del':prev?'edit':'add',label:recLabel(rec)};
+  const keep=t==='del'?prev:gone?s:null;
+  if(keep&&keep.length<room){e.prev=keep;room-=keep.length}
+  out.push(e);
+ }
+ return out.slice(0,300);
+}
+function writeAudit(changes){
+ if(!changes.length||prot.auditDenied)return;
+ const {collection,addDoc}=cloud.sdk;
+ addDoc(collection(cloud.fs,'audit'),{t:Date.now(),email:(cloud.user?.email||'').toLowerCase(),who:whoAmI(),admin:!!cloud.admin,changes})
+  .then(()=>{prot.log=null;if(page===8&&!editing)loadProtection()})
+  .catch(e=>{if(e.code==='permission-denied')prot.auditDenied=true});
+}
+function undoDeleted(logId,i){
+ const e=prot.log?.find(x=>x.id===logId)?.changes?.[i];if(!e?.prev)return;
+ const r=JSON.parse(e.prev);
+ if(r.kind==='research'){const id=String(r.poll).slice(1);if(db.research.some(x=>x.id===id))return toast('هذا البحث موجود حالياً');db.research.push({...(r.data||{}),id,teacher:r.teacher,createdAt:r.createdAt})}
+ else if(e.c==='answers'){const p=db.polls.find(x=>x.id===r.poll);if(!p)return toast('السؤال نفسه محذوف؛ استعده أولاً');if(!p.answers.some(a=>a.teacher===r.teacher))p.answers.push({teacher:r.teacher,answer:r.answer})}
+ else{const col=e.c==='workloads'?'workloads':e.c;if(!Array.isArray(db[col]))return;if(db[col].some(x=>x.id===r.id))return toast('هذا السجل موجود حالياً');
+  if(col==='announcements')r.read=[];if(col==='polls')r.answers=[];db[col].push(r)}
+ commit('تمت استعادة: '+(e.label||LOG_COLS[e.c]));
+}
+
+// ---------- النسخة الكاملة على الجهاز والاسترجاع ----------
+function validBackup(x){
+ x.research=x.research||[];
+ for(const k in initial)if(!Array.isArray(x[k]))return false;
+ return x.teachers.every(t=>typeof t.id==='string'&&typeof t.name==='string'&&typeof (t.days??'')==='string')&&x.announcements.every(a=>Array.isArray(a.read))&&x.committees.every(c=>Array.isArray(c.members))&&x.polls.every(p=>Array.isArray(p.answers));
+}
+async function backupFull(){
+ prot.busy='جارٍ تجهيز النسخة الكاملة…';render();
+ try{
+  const out={app:'smart-department',version:2,exportedAt:new Date().toISOString(),by:cloud.user?.email||'',data:db,files:{}};
+  if(cloud.on&&cloud.sdk){const {doc,getDoc}=cloud.sdk;
+   for(const f of chunkedFiles(db)){const parts=[];for(let i=0;i<f.chunks;i++){const d=await getDoc(doc(cloud.fs,'meta',f.ref+'_'+i));if(d.exists())parts.push(await toB64(d.data().data.toUint8Array()))}if(parts.length===f.chunks)out.files[f.ref]=parts}}
+  download('نسخة-احتياطية-رئاسة-القسم-'+today()+'.json',JSON.stringify(out),'application/json');
+  try{localStorage.setItem('smart-department-lastbackup',String(Date.now()))}catch{}
+  toast('تم تنزيل النسخة الكاملة'+(Object.keys(out.files).length?' مع '+Object.keys(out.files).length+' ملف مرفق':''));
+ }catch(e){toast('تعذر تجهيز النسخة: '+e.message)}
+ prot.busy='';render();
+}
+async function backupExcel(){
+ try{
+  const X=await getSheetJs(),book=X.utils.book_new(),tn=id=>db.teachers.find(t=>t.id===id)?.name||id;
+  const cell=(k,v)=>{if(v==null)return '';if(/^(teacher|head|lead|owner)$/i.test(k)&&typeof v==='string')return tn(v);if(Array.isArray(v))return v.map(x=>typeof x==='string'?(/members|read|teachers/i.test(k)?tn(x):x):x?.name||x?.teacher&&tn(x.teacher)+(x.answer?': '+x.answer:'')||JSON.stringify(x)).join('، ');if(typeof v==='object')return JSON.stringify(v).slice(0,3000);const t=String(v);return t.startsWith('data:')?'(ملف مرفق)':t.slice(0,32000)};
+  const sheets=[['teachers','التدريسيون'],['courses','المواد'],['schedule','الجداول'],['announcements','التبليغات'],['research','البحوث'],['tasks','التكليفات'],['committees','اللجان'],['polls','الأسئلة'],['invigilation','المراقبات'],['letters','الكتب الإدارية'],['workloads','العبء التدريسي']];
+  for(const [k,title] of sheets){const rows=(db[k]||[]).filter(r=>!r.deleted);if(!rows.length)continue;
+   const keys=[...new Set(rows.flatMap(Object.keys))].filter(x=>!['id','createdAt','attachments','files','images','gen'].includes(x));
+   X.utils.book_append_sheet(book,X.utils.aoa_to_sheet([keys,...rows.map(r=>keys.map(x=>cell(x,r[x])))]),title)}
+  const p=db.examPlan;if(p?.grid)X.utils.book_append_sheet(book,X.utils.aoa_to_sheet([['التاريخ',...(p.rooms||[]),'الاحتياط'],...Object.keys(p.grid).sort().map(d=>[d,...(p.rooms||[]).map(r=>(p.grid[d]?.rooms?.[r]||[]).filter(Boolean).map(tn).join('، ')),(p.grid[d]?.reserve||[]).filter(Boolean).map(tn).join('، ')])]),'جدول المراقبات');
+  if(!book.SheetNames.length)return toast('لا توجد بيانات للتصدير');
+  X.writeFile(book,'بيانات-رئاسة-القسم-'+today()+'.xlsx');toast('تم تصدير البيانات إلى Excel');
+ }catch(e){toast('تعذر التصدير: '+e.message)}
+}
+// كل استرجاع يسبقه حفظ نقطة «قبل الاسترجاع» تلقائياً، فيمكن التراجع عنه
+async function restoreData(x,files,label){
+ if(!validBackup(x))return toast('الملف غير صالح أو لا يطابق نسخة التطبيق');
+ if(!confirm('استرجاع '+label+'؟\n\nالنسخة: '+countsText(countsOf(x))+'\nالحالية: '+countsText(countsOf(db))+'\n\n'+(cloud.on?'ستُستبدل البيانات المشتركة لكل المستخدمين، وتُحفظ نقطة استرجاع للحالة الحالية قبل ذلك.':'ستُستبدل بيانات هذا المتصفح.')))return;
+ try{
+  if(cloud.on&&cloud.admin&&!prot.denied){prot.busy='جارٍ حفظ نقطة للحالة الحالية قبل الاسترجاع…';render();await makeSnap('قبل الاسترجاع')}
+  if(cloud.on&&files){const {doc,setDoc,Bytes}=cloud.sdk;for(const [ref,parts] of Object.entries(files))for(let i=0;i<parts.length;i++)await setDoc(doc(cloud.fs,'meta',ref+'_'+i),{data:Bytes.fromUint8Array(fromB64(parts[i])),i,n:parts.length})}
+ }catch(e){prot.busy='';render();return toast('توقف الاسترجاع: '+e.message)}
+ prot.busy='';cloud.bulkOk=true;
+ db=x;db.workloads=Array.isArray(db.workloads)?db.workloads:[];db.workloadMeta=db.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};editing=null;commit('تم الاسترجاع ('+label+')');
+}
+async function restoreSnap(id){
+ const x=prot.snaps?.find(s=>s.id===id);if(!x)return;
+ prot.busy='جارٍ تحميل نقطة الاسترجاع…';render();
+ try{const data=await readSnap(x);prot.busy='';render();await restoreData(data,null,'نقطة '+fmtTime(x.t))}catch(e){prot.busy='';render();toast('تعذر تحميل النقطة: '+e.message)}
+}
+async function downloadSnap(id){
+ const x=prot.snaps?.find(s=>s.id===id);if(!x)return;
+ try{download('نقطة-استرجاع-'+new Date(x.t).toLocaleDateString('en-CA')+'.json',JSON.stringify({app:'smart-department',version:2,exportedAt:new Date(x.t).toISOString(),by:x.email,data:await readSnap(x),files:{}}),'application/json')}catch(e){toast('تعذر التنزيل: '+e.message)}
+}
+
+const RULES_HELP='<div class="alert warn"><span>⚠️ النقاط التلقائية وسجل التغييرات يحتاجان تحديث قواعد الحماية مرة واحدة: افتح Firebase Console ← Firestore Database ← Rules، والصق محتوى ملف <b>firestore.rules</b> الجديد من المستودع، ثم اضغط Publish وأعد تحميل الصفحة. النسخة على الجهاز تعمل الآن دون ذلك.</span><a class="btn-sm secondary" href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/blob/main/firestore.rules" target="_blank" rel="noopener">فتح الملف</a></div>';
 function backupView(){
- const n=Object.keys(initial).reduce((s,k)=>s+db[k].length,0)+(db.workloads||[]).length;
- return section('حماية بيانات المتصفح','<p>البيانات الحالية: '+n+' سجل. صدّر نسخة JSON دورياً واحفظها خارج المتصفح. '+(cloud.on?'الاستيراد يستبدل البيانات المشتركة لكل المستخدمين بعد تأكيدك.':'الاستيراد يستبدل بيانات هذا المتصفح بعد تأكيدك.')+'</p><div class="tools"><button data-action="backup">تنزيل نسخة احتياطية</button></div>'+form('restore',field('file','استيراد نسخة JSON','file'),'استيراد')+''+(cloud.on?'':'<p class="muted">لا تُخزّن بيانات حساسة في النسخة التجريبية. لا يتضمن الحفظ المحلي حسابات أو قاعدة بيانات مشتركة.</p>')+'');
+ if(cloud.on&&cloud.admin&&(prot.snaps===null||prot.log===null)&&!prot.loading&&!prot.denied)setTimeout(loadProtection);
+ const local=lastLocalBackup(),last=prot.snaps?.[0],busy=prot.busy?'<div class="alert ok"><span>⏳ '+prot.busy+'</span></div>':'';
+ const cards='<div class="cards"><div class="card stat'+(cloud.on&&(prot.denied||prot.snaps&&!last)?' danger':'')+'"><small>آخر نقطة استرجاع في السحابة</small><b>'+(!cloud.on?'السحابة غير مفعّلة':prot.denied?'متوقفة':prot.snaps===null?'…':agoText(last?.t))+'</b></div><div class="card stat"><small>نقاط الاسترجاع المحفوظة</small><b>'+(prot.denied?'—':prot.snaps?.length??'…')+'</b></div><div class="card stat'+(!local||Date.now()-local>30*864e5?' danger':'')+'"><small>آخر نسخة على جهازك</small><b>'+agoText(local)+'</b></div></div>';
+ const snapRows=(prot.snaps||[]).map(x=>[esc(fmtTime(x.t)),esc(x.reason||''),esc(x.who||x.email||''),'<small>'+esc(countsText(x.counts))+'</small>','<span class="row-actions"><button class="btn-sm" data-snap-restore="'+esc(x.id)+'">استرجاع</button><button class="btn-sm secondary" data-snap-dl="'+esc(x.id)+'">تنزيل</button></span>']);
+ const snaps=!cloud.on?'':section('نقاط الاسترجاع التلقائية','<p class="muted">ينشئ النظام نقطة استرجاع كاملة كل يوم عند دخول رئيس القسم أو أي مشرف، ويحتفظ بآخر '+SNAP_KEEP+' نقطة. الاسترجاع يعيد كل بيانات القسم إلى لحظة النقطة، ويحفظ قبله نقطة للحالة الحالية فيمكن التراجع عنه.</p>'+(prot.denied?RULES_HELP:'<div class="tools"><button data-action="snapNow">💾 إنشاء نقطة استرجاع الآن</button></div>'+(prot.snaps===null?'<p class="muted">جارٍ التحميل…</p>':table(['التاريخ','النوع','بواسطة','المحتوى',''],snapRows))));
+ const device=section('نسخة كاملة على جهازك','<p class="muted">احفظها في مكان آمن خارج المتصفح (فلاش أو بريدك أو OneDrive) مرة في الشهر على الأقل. النسخة الكاملة تشمل كل البيانات والملفات المرفقة وتصلح للاسترجاع، وملف Excel نسخة مقروءة للأرشيف والطباعة.</p><div class="tools"><button data-action="backupFull">⬇️ تنزيل نسخة كاملة</button><button class="secondary" data-action="backupExcel">📊 تصدير كل البيانات إلى Excel</button></div>'+form('restore',field('file','استرجاع من نسخة محفوظة (JSON)','file'),'استرجاع'));
+ let log='';
+ if(cloud.on&&!prot.denied){
+  const f=prot.filter,people=[...new Set((prot.log||[]).map(e=>e.who||e.email))];
+  const rows=(prot.log||[]).filter(e=>!f||(e.who||e.email)===f).flatMap(e=>e.changes.map((c,i)=>{const [cls,txt]=LOG_ACTS[c.a]||['info',c.a];return [esc(fmtTime(e.t)),esc(e.who||e.email)+(e.admin?'':' '+pill('info','تدريسي')),pill(cls,txt),esc(LOG_COLS[c.c]||c.c),esc(c.label||'—'),c.a==='del'&&c.prev?'<button class="btn-sm secondary" data-undo="'+esc(e.id)+'|'+i+'">↩️ استعادة</button>':'']}));
+  log=section('سجل التغييرات','<p class="muted">يُسجَّل تلقائياً كل ما يُضاف أو يُعدَّل أو يُحذف: من قام به ومتى. لا يمكن لأحد تعديل السجل أو حذفه، والسجلات المحذوفة يمكن استعادتها من هنا بضغطة.</p>'
+   +(prot.auditDenied?RULES_HELP:'')
+   +'<div class="tools"><label>عرض تغييرات <select id="logWho"><option value="">الجميع</option>'+people.map(x=>'<option'+(x===f?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><button class="secondary" data-action="logRefresh">🔄 تحديث</button></div>'
+   +(prot.log===null?'<p class="muted">جارٍ التحميل…</p>':rows.length?table(['الوقت','بواسطة','العملية','النوع','السجل',''],rows)+((prot.log||[]).length>=prot.logLimit?'<div class="tools"><button class="secondary" data-action="logMore">عرض المزيد</button></div>':''):'<p class="empty">لا توجد تغييرات مسجلة بعد. ستظهر هنا كل التعديلات القادمة.</p>'));
+ }
+ return busy+cards+snaps+device+log+(cloud.on?'':'<p class="muted">النقاط التلقائية وسجل التغييرات تعمل عند تفعيل قاعدة البيانات المشتركة.</p>');
+}
+function bindProtection(){
+ document.querySelectorAll('[data-snap-restore]').forEach(b=>b.onclick=()=>restoreSnap(b.dataset.snapRestore));
+ document.querySelectorAll('[data-snap-dl]').forEach(b=>b.onclick=()=>downloadSnap(b.dataset.snapDl));
+ document.querySelectorAll('[data-undo]').forEach(b=>b.onclick=()=>{const [id,i]=b.dataset.undo.split('|');undoDeleted(id,Number(i))});
+ const w=$('#logWho');if(w)w.onchange=()=>{prot.filter=w.value;render()};
 }
 function fillEditing(){
  if(!editing)return;const f=document.getElementById(editing.form),rec=db[COLS[editing.form]]?.find(x=>x.id===editing.id);
@@ -1382,6 +1551,7 @@ $('#title').textContent=pages[page];document.title=pages[page]+' · رئاسة �
 const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,()=>adminsSection()+adminView(),workloadView,researchView,lettersView];
 $('#view').innerHTML=(viewAs?'<div class="alert ok preview-bar"><span>👁️ '+(viewAs===ownTeacher()?'تشاهد النظام بصفتك تدريسياً':'تشاهد النظام كما يراه: <b>'+esc(name(viewAs))+'</b> · معاينة فقط')+'</span><button data-action="exitView">العودة إلى رئيس القسم</button></div>':'')+views[page]();
 if(page===9)bindAdmin();
+if(page===8)bindProtection();
 if(page===10)bindWorkload();
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>go(Number(b.dataset.page)));
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>action(b.dataset.action));
@@ -1426,7 +1596,7 @@ db.polls.forEach(p=>bind('answer-'+p.id,d=>{if(previewOther())return toast('مع
 document.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>{const t=db.tasks.find(t=>t.id===b.dataset.done);t.done=!t.done;commit(t.done?'سُجّل إنجاز المهمة':'أُعيد فتح المهمة')});
 document.querySelectorAll('[data-read]').forEach(b=>b.onclick=()=>{if(previewOther())return toast('معاينة فقط: لا يمكن تأكيد القراءة نيابة عن التدريسي');const a=db.announcements.find(a=>a.id===b.dataset.read);if(!a.read.includes(person))a.read.push(person);commit(db.announcements.every(x=>x.read.includes(person))?'🎉 أحسنت! قرأت كل التبليغات':'تم تأكيد القراءة ✓')});
 if($('#scheduleFilter')){$('#scheduleFilter').value=scheduleFilter;$('#scheduleFilter').onchange=e=>{scheduleFilter=e.target.value;render()}}
-bind('restore',async(d,f)=>{try{const x=JSON.parse(await f.elements.file.files[0].text());x.research=x.research||[];for(const k in initial)if(!Array.isArray(x[k]))throw Error();if(!x.teachers.every(t=>typeof t.id==='string'&&typeof t.name==='string'&&typeof (t.days??'')==='string')||!x.announcements.every(a=>Array.isArray(a.read))||!x.committees.every(c=>Array.isArray(c.members))||!x.polls.every(p=>Array.isArray(p.answers)))throw Error();if(confirm(cloud.on?'استبدال البيانات المشتركة لكل المستخدمين بالنسخة المختارة؟':'استبدال بيانات هذا المتصفح بالنسخة المختارة؟')){db=x;db.workloads=Array.isArray(db.workloads)?db.workloads:[];db.workloadMeta=db.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};editing=null;commit('تم الاستيراد')}}catch{toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}});
+bind('restore',async(d,f)=>{let x;try{x=JSON.parse(await f.elements.file.files[0].text())}catch{return toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}const data=x?.app==='smart-department'?x.data:x;restoreData(data||{},x?.files||null,'النسخة '+(x?.exportedAt?new Date(x.exportedAt).toLocaleDateString('ar-IQ'):f.elements.file.files[0].name))});
 bind('adminForm',d=>{const e=d.email.trim().toLowerCase();if(!e.endsWith('@'+DOMAIN))return toast('يجب أن يكون البريد من نطاق '+DOMAIN);if(cloud.admins.includes(e))return toast('الحساب مشرف مسبقاً');setAdmins([...cloud.admins,e])});
 document.querySelectorAll('[data-admin-del]').forEach(b=>b.onclick=()=>{const e=b.dataset.adminDel;if(e===cloud.user.email.toLowerCase()&&!confirm('ستفقد صلاحية الإدارة بإزالة حسابك. متابعة؟'))return;setAdmins(cloud.admins.filter(x=>x!==e))});
 document.querySelectorAll('[data-study]').forEach(b=>b.onclick=()=>{schedStudy=b.dataset.study;render()});
@@ -1517,10 +1687,12 @@ function generateSchedule(){
 }
 function action(a){
 if(a==='exitView')return setViewAs('');if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
-if(a==='backup')download('smart-department-backup-'+today()+'.json',JSON.stringify(db,null,2),'application/json');
+if(a==='backup'||a==='backupFull')backupFull();if(a==='backupExcel')backupExcel();
+if(a==='snapNow'){prot.busy='جارٍ إنشاء نقطة استرجاع…';render();makeSnap('يدوية').then(()=>{prot.busy='';render();toast('تم حفظ نقطة استرجاع')}).catch(e=>{prot.busy='';if(e.code==='permission-denied')prot.denied=true;render();toast('تعذر الحفظ: '+e.message)})}
+if(a==='logRefresh'){prot.log=null;loadProtection()}if(a==='logMore'){prot.logLimit+=100;loadProtection()}
 if(a==='generate'){if(!db.courses.length)return toast('أضف المواد أولاً');generateSchedule()}
 if(a==='ttImport'){const i=$('#ttFile');i.value='';i.onchange=()=>ttImport(i.files[0]);i.click()}
-if(a==='migrate'&&confirm('رفع البيانات المحلية من هذا المتصفح إلى قاعدة البيانات المشتركة؟')){const x=structuredClone(localData);for(const k of CORE)db[k]=x[k]||[];db.schedule=x.schedule||[];db.scheduleStale=!!x.scheduleStale;db.workloads=x.workloads||[];db.workloadMeta=x.workloadMeta||db.workloadMeta;commit('جارٍ رفع البيانات إلى السحابة')}
+if(a==='migrate'&&confirm('رفع البيانات المحلية من هذا المتصفح إلى قاعدة البيانات المشتركة؟')){cloud.bulkOk=true;const x=structuredClone(localData);for(const k of CORE)db[k]=x[k]||[];db.schedule=x.schedule||[];db.scheduleStale=!!x.scheduleStale;db.workloads=x.workloads||[];db.workloadMeta=x.workloadMeta||db.workloadMeta;commit('جارٍ رفع البيانات إلى السحابة')}
 }
 
 let importRows=[],importBook=null,importMessage='';
@@ -1791,15 +1963,19 @@ async function pushNow(){
  const {doc,writeBatch}=cloud.sdk,view=cloudView(),ops=[];
  for(const c of cloud.admin?Object.keys(view):['reads','answers']){
   const sh=cloud.shadow[c]||new Map();
-  for(const [id,data] of view[c]){const s=stable(data);if(sh.get(id)!==s&&(cloud.admin||data.teacher===cloud.teacherId))ops.push(['set',c,id,s])}
-  if(cloud.admin)for(const id of sh.keys())if(!view[c].has(id))ops.push(['del',c,id]);
+  for(const [id,data] of view[c]){const s=stable(data);if(sh.get(id)!==s&&(cloud.admin||data.teacher===cloud.teacherId))ops.push(['set',c,id,s,sh.get(id)])}
+  if(cloud.admin)for(const id of sh.keys())if(!view[c].has(id))ops.push(['del',c,id,null,sh.get(id)]);
  }
  if(!ops.length)return;
+ // حماية من الحذف الجماعي غير المقصود (الاسترجاع ونقل البيانات مستثنيان لأنهما مؤكَّدان مسبقاً)
+ const dels=ops.filter(([t,c])=>t==='del'&&c!=='reads').length,bulk=cloud.bulkOk;cloud.bulkOk=false;
+ if(dels>=BULK_DEL&&!bulk&&!confirm('ستُحذف '+dels+' سجلات دفعة واحدة من البيانات المشتركة. هل أنت متأكد؟')){applyRemote(true);return toast('أُلغي الحذف ولم يتغير شيء')}
+ const changes=auditChanges(ops);
  for(const [t,c,id,s] of ops){cloud.shadow[c]??=new Map();t==='set'?cloud.shadow[c].set(id,s):cloud.shadow[c].delete(id)}
  setSync(navigator.onLine?'saving':'offline');
  try{
   for(let i=0;i<ops.length;i+=450){const b=writeBatch(cloud.fs);for(const [t,c,id,s] of ops.slice(i,i+450)){const r=doc(cloud.fs,c,id);t==='set'?b.set(r,JSON.parse(s)):b.delete(r)}await b.commit()}
-  setSync('ok');
+  setSync('ok');writeAudit(changes);
  }catch(e){
   setSync('error');toast('تعذر الحفظ في السحابة: '+(e.code==='permission-denied'?'لا تملك صلاحية هذا التعديل':e.message));
   applyRemote(true);
@@ -1855,6 +2031,7 @@ function loaded(c){
   applyRemote();
   if(!cloud.admins)return gate('bootstrap');
   cloud.ready=true;showApp();setSync(navigator.onLine?'ok':'offline');
+  setTimeout(autoSnap,5000);
  }
  if(cloud.ready)applyRemote();
 }
