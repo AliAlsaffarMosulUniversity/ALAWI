@@ -1144,6 +1144,7 @@ function researchForm(){
   +field('impact','معامل التأثير (اختياري)','text',false),'حفظ البحث');
 }
 function researchView(){
+ if(cloud.on&&cloud.researchDenied)return section('البحث الأكاديمي','<div class="alert warn"><span>⚠️ قاعدة البيانات ترفض الوصول إلى البحوث: قواعد الحماية في Firebase لم تُحدَّث بعد. انسخ محتوى ملف firestore.rules الجديد إلى Firebase Console ← Firestore Database ← Rules ثم اضغط Publish، وأعد تحميل الصفحة.</span></div>');
  const admin=isAdmin(),list=filteredResearch(),st=researchStats(list),years=[...new Set(db.research.map(r=>String(r.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
  if(!admin&&!person)return section('البحث الأكاديمي','<p class="empty">حسابك غير مرتبط بسجل تدريسي، لذا لا يمكنك تسجيل بحوث.</p>');
  const kpis=[['📚','مجموع البحوث',st.total,''],['🟠','Scopus',st.scopus,'r-scopus'],['🟣','Clarivate',st.clarivate,'r-clar'],['🌍','عالمية (كل التصنيفات)',st.intl,'r-intl'],['🏠','محلية',st.local,'r-local'],['🏅','Q1 و Q2',st.q12,'r-q'],['⏳','مقبولة للنشر',st.accepted,''],
@@ -1653,7 +1654,7 @@ function queuePush(){if(pushQueued)return;pushQueued=true;queueMicrotask(pushNow
 async function pushNow(){
  pushQueued=false;
  const {doc,writeBatch}=cloud.sdk,view=cloudView(),ops=[];
- for(const c of cloud.admin?Object.keys(view):['reads','answers','research']){
+ for(const c of (cloud.admin?Object.keys(view):['reads','answers','research']).filter(c=>!(c==='research'&&cloud.researchDenied))){
   const sh=cloud.shadow[c]||new Map();
   for(const [id,data] of view[c]){const s=stable(data);if(sh.get(id)!==s&&(cloud.admin||data.teacher===cloud.teacherId))ops.push(['set',c,id,s])}
   if(cloud.admin)for(const id of sh.keys()){if(!view[c].has(id))ops.push(['del',c,id])}
@@ -1709,7 +1710,9 @@ function listenError(e){
 function subscribe(){
  const {doc,onSnapshot}=cloud.sdk;
  cloud.expect=CORE.length+4;
- for(const c of [...CORE,'reads','answers'])cloud.unsubs.push(listen(c));
+ // البحوث ميزة حديثة: إن لم تُحدَّث قواعد الحماية بعد يعمل باقي التطبيق وتظهر صفحة البحوث بتنبيه
+ const researchError=e=>{if(e.code!=='permission-denied')return listenError(e);cloud.researchDenied=true;cloud.raw.research=new Map();cloud.shadow.research=new Map();loaded('research');if(cloud.ready)render()};
+ for(const c of [...CORE,'reads','answers'])cloud.unsubs.push(c==='research'?listen(c,researchError):listen(c));
  cloud.unsubs.push(onSnapshot(doc(cloud.fs,'meta','state'),s=>{const d=s.exists()?s.data():null;cloud.raw.meta=new Map(d?[['state',d]]:[]);cloud.shadow.meta=new Map(d?[['state',stable(d)]]:[]);loaded('meta')},listenError));
  cloud.unsubs.push(onSnapshot(doc(cloud.fs,'config','admins'),{includeMetadataChanges:true},s=>{if(s.metadata.hasPendingWrites)return;cloud.admins=s.exists()?(s.data().emails||[]).map(e=>String(e).toLowerCase()):null;loaded('admins')},listenError));
 }
@@ -1724,7 +1727,7 @@ function loaded(c){
 }
 function resetCloud(){
  cloud.unsubs.forEach(u=>u());if(cloud.wlUnsub)cloud.wlUnsub();
- Object.assign(cloud,{unsubs:[],wlUnsub:null,raw:{},shadow:{},loaded:new Set(),ready:false,dirty:false,admins:null,admin:false,teacherId:''});
+ Object.assign(cloud,{unsubs:[],wlUnsub:null,raw:{},shadow:{},loaded:new Set(),ready:false,dirty:false,admins:null,admin:false,teacherId:'',researchDenied:false});
  $('#syncBar').style.display='none';
  db=structuredClone(initial);
 }
