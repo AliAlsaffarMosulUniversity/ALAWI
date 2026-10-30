@@ -1362,17 +1362,16 @@ const L_TEMPLATES={
 };
 const L_TO=['عمادة كلية الإدارة والاقتصاد','السيد عميد الكلية المحترم','السيد معاون العميد للشؤون العلمية المحترم','السيد معاون العميد للشؤون الإدارية المحترم','شعبة الدراسات والتخطيط','شعبة التسجيل وشؤون الطلبة','شعبة الموارد البشرية','السادة التدريسيين في القسم المحترمين','رئاسة جامعة الموصل'];
 const lcfg=()=>db.letterCfg||(db.letterCfg={prefix:'ق.إ.أ',signName:'',signTitle:'رئيس قسم إدارة الأعمال',contact:'كلية الإدارة والاقتصاد · جامعة الموصل'});
-const hijri=d=>{try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00'))}catch{return ''}};
 const fmtDate=d=>d?d.split('-').reverse().join('/'):'';
 function nextLetterNo(){const y=today().slice(0,4),nums=(db.letters||[]).filter(l=>String(l.date).startsWith(y)).map(l=>parseInt(String(l.no).split('/').pop())||0);return (nums.length?Math.max(...nums):0)+1}
 let letterDraft=null;
-function newDraft(){const c=lcfg();return {id:'',no:lcfg().prefix+'/'+nextLetterNo(),date:today(),to:'',subject:'',greet:'تحية طيبة …',body:'',close:'مع التقدير.',signName:c.signName,signTitle:c.signTitle,attach:'',cc:'',showHijri:true}}
+function newDraft(){const c=lcfg();return {id:'',no:lcfg().prefix+'/'+nextLetterNo(),date:today(),to:'',subject:'',greet:'تحية طيبة …',body:'',close:'مع التقدير.',signName:c.signName,signTitle:c.signTitle,attach:'',cc:''}}
 function letterHTML(L){
  const paras=String(L.body||'').split(/\n+/).filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')||'<p class="l-ph">نص الكتاب…</p>',cc=String(L.cc||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
  return '<div class="letter-page"><img class="l-wm" src="assets/college-logo.webp" alt="">'
   +'<header class="lh"><div class="lh-r">جمهورية العراق<br>وزارة التعليم العالي والبحث العلمي<br>جامعة الموصل<br>كلية الإدارة والاقتصاد<br><b>قسم إدارة الأعمال</b></div>'
   +'<div class="lh-c"><img src="assets/college-logo.webp" alt="شعار كلية الإدارة والاقتصاد"></div>'
-  +'<div class="lh-l"><span>العدد: <b>'+esc(L.no||'')+'</b></span><span>التاريخ: <b>'+esc(fmtDate(L.date))+' م</b></span>'+(L.showHijri&&L.date?'<span>الموافق: '+esc(hijri(L.date))+'</span>':'')+'</div></header><div class="lh-rule"></div>'
+  +'<div class="lh-l"><span>العدد: <b>'+esc(L.no||'')+'</b></span><span>التاريخ: <b>'+esc(fmtDate(L.date))+' م</b></span>'+'</div></header><div class="lh-rule"></div>'
   +'<p class="l-to">إلى / <b>'+esc(L.to||'…')+'</b></p><p class="l-sub">م / <b>'+esc(L.subject||'…')+'</b></p>'
   +(L.greet?'<p class="l-greet">'+esc(L.greet)+'</p>':'')+'<div class="l-body">'+paras+'</div>'+(L.close?'<p class="l-close">'+esc(L.close)+'</p>':'')
   +'<div class="l-sign"><b>'+esc(L.signName||'…………………')+'</b><span>'+esc(L.signTitle||'')+'</span><span>'+esc(fmtDate(L.date))+'</span></div>'
@@ -1394,7 +1393,6 @@ function lettersView(){
    +f('signName','اسم الموقّع',L.signName)+f('signTitle','صفة الموقّع',L.signTitle)
    +'<label class="full">المرفقات (اختياري)<input name="attach" value="'+esc(L.attach)+'"></label>'
    +'<label class="full">نسخة منه إلى (كل جهة في سطر)<textarea name="cc" rows="3">'+esc(L.cc)+'</textarea></label>'
-   +'<label class="chip"><input type="checkbox" name="showHijri"'+(L.showHijri?' checked':'')+'>إظهار التاريخ الهجري</label>'
    +'<div class="form-actions full"><button type="button" data-lsave>💾 حفظ في الأرشيف</button><button type="button" class="secondary" data-lprint>🖨️ طباعة / PDF</button><button type="button" class="secondary" data-lnew>كتاب جديد</button></div></form>'
    +'<details class="l-cfg"><summary>⚙️ إعدادات الكتب: رمز الترقيم، الموقّع، تذييل الصفحة</summary><form id="letterCfg" class="l-form">'+f('prefix','رمز العدد',c.prefix)+f('signName','اسم رئيس القسم (افتراضي)',c.signName)+f('signTitle','الصفة (افتراضية)',c.signTitle)+'<label class="full">تذييل الصفحة<input name="contact" value="'+esc(c.contact)+'" placeholder="العنوان، البريد الإلكتروني، الهاتف"></label><div class="form-actions full"><button>حفظ الإعدادات</button></div></form></details>')
   +section('👁️ معاينة الكتاب (A4)','<div class="l-preview" id="letterPreview">'+letterHTML(L)+'</div>')
@@ -1403,7 +1401,7 @@ function lettersView(){
 }
 function bindLetters(){
  const fm=$('#letterForm');if(!fm)return;
- const read=()=>{const d=new FormData(fm);['no','date','to','subject','greet','close','body','signName','signTitle','attach','cc'].forEach(k=>letterDraft[k]=String(d.get(k)??''));letterDraft.showHijri=!!d.get('showHijri');$('#letterPreview').innerHTML=letterHTML(letterDraft)};
+ const read=()=>{const d=new FormData(fm);['no','date','to','subject','greet','close','body','signName','signTitle','attach','cc'].forEach(k=>letterDraft[k]=String(d.get(k)??''));$('#letterPreview').innerHTML=letterHTML(letterDraft)};
  fm.addEventListener('input',read);fm.addEventListener('change',read);
  document.querySelectorAll('[data-ltpl]').forEach(b=>b.onclick=()=>{read();const t=L_TEMPLATES[b.dataset.ltpl];if(letterDraft.body&&!confirm('استبدال نص الكتاب الحالي بالقالب؟'))return;Object.assign(letterDraft,t);render()});
  fm.querySelector('[data-lnew]').onclick=()=>{letterDraft=newDraft();render()};
