@@ -353,6 +353,23 @@ body.nav-hidden .top-logo{display:block}
 .r-idle{color:var(--muted);font-size:13px;line-height:1.9}
 .print-only{display:none}
 @media print{.print-only{display:block}.r-filter,#research{display:none!important}.r-charts>div,.r-kpi{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}.r-bars i,.r-stack em{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.r-report{display:none}
+@media print{
+ body.print-research main>*:not(#view),body.print-research #view>*:not(.r-report),body.print-research .top-logo{display:none!important}
+ body.print-research .r-report{display:block}
+ body.print-research main{max-width:none}
+ .rr-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0f2747;padding-bottom:10px;margin-bottom:6px}
+ .rr-head img{width:70px;height:70px}
+ .rr-head h2{margin:2px 0;font-size:18px}.rr-head span{font-size:11px;color:#444}
+ .r-report h3{font-size:13px;margin:14px 0 6px;color:#0f2747}
+ .rr-t{width:100%;border-collapse:collapse;font-size:10.5px;margin:0}
+ .rr-t th,.rr-t td{border:1px solid #999;padding:4px 6px;text-align:center;vertical-align:middle}
+ .rr-t th{background:#e8edf5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .rr-t tr{break-inside:avoid}
+ .rr-link{direction:ltr;unicode-bidi:embed;word-break:break-all;font-size:9.5px}
+ .rr-idle{font-size:11px;line-height:1.8}
+ .rr-sign{display:flex;justify-content:space-between;margin-top:28px;font-size:12px}
+}
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
 .preview-bar{position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
@@ -1164,11 +1181,24 @@ function researchView(){
  return section(formTitle('research','➕ '+(admin?'إضافة بحث لتدريسي':'إضافة بحث جديد'),'تعديل البحث'),researchForm())
   +section('🔎 '+(admin?'بحوث القسم':'بحوثي'),filters+'<p class="print-only r-print-title"><b>الإحصائية البحثية — '+esc(filterLabel())+'</b></p>'
    +'<div class="r-kpis">'+kpis.map(([ic,l,v,c])=>'<div class="r-kpi '+c+'"><span>'+ic+'</span><b>'+v+'</b><small>'+l+'</small></div>').join('')+'</div>'
-   +'<div class="tools"><button data-r-export>📤 تصدير Excel</button><button class="secondary" data-action="print">🖨️ طباعة الإحصائية</button><span class="muted">'+esc(filterLabel())+' · '+list.length+' بحثاً</span></div>'
+   +'<div class="tools"><button data-r-export>📤 تصدير Excel</button><button class="secondary" data-r-print>🖨️ طباعة الإحصائية</button><span class="muted">'+esc(filterLabel())+' · '+list.length+' بحثاً</span></div>'
    +(list.length?'<div class="r-charts"><div><h4>حسب التصنيف</h4>'+bars(st.byIndex.filter(x=>x[1]),r=>r[2])+'</div><div><h4>حسب السنة (عالمي / محلي)</h4><div class="r-bars">'+yearRows.map(([y,v])=>{const m=Math.max(1,...yearRows.map(([,w])=>w.intl+w.local));return '<div><span>'+y+'</span><i class="r-stack" style="width:'+((v.intl+v.local)/m*100)+'%"><em style="flex:'+v.intl+'"></em><em style="flex:'+v.local+'"></em></i><b>'+(v.intl+v.local)+'</b></div>'}).join('')+'</div></div><div><h4>حسب ربع المجلة</h4>'+bars(st.byQ)+'</div>'
     +(admin?'<div class="r-wide"><h4>🏆 الأكثر نشراً</h4><div class="scroll"><table><thead><tr><th>التدريسي</th><th>المجموع</th><th>Scopus</th><th>Clarivate</th><th>عالمي</th><th>محلي</th><th>Q1–Q2</th></tr></thead><tbody>'+per.slice(0,15).map(([id,o])=>'<tr><td>'+esc(name(id))+'</td><td><b>'+o.n+'</b></td><td>'+o.scopus+'</td><td>'+o.clarivate+'</td><td>'+o.intl+'</td><td>'+o.local+'</td><td>'+o.q12+'</td></tr>').join('')+'</tbody></table></div></div>'
      +(st.idle.length?'<div class="r-wide"><h4>📭 تدريسيو القسم بلا بحوث في هذه الفترة ('+st.idle.length+')</h4><p class="r-idle">'+st.idle.map(t=>esc(t.name)).join('، ')+'</p></div>':''):'')+'</div>':'')
-   +table([...(admin?['التدريسي']:[]),'البحث','التصنيف','التاريخ','الحالة',''],rows));
+   +table([...(admin?['التدريسي']:[]),'البحث','التصنيف','التاريخ','الحالة',''],rows))
+  +'<div class="r-report">'+researchReport(list,st,admin)+'</div>';
+}
+// تقرير الطباعة: صفحة رسمية مستقلة (الشعار، الفلتر، المؤشرات، التوزيع، كل تدريسي، تفاصيل البحوث، التوقيع)
+function researchReport(list,st,admin){
+ const t=(head,rows)=>'<table class="rr-t"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+ const per=Object.entries(st.per).sort((a,b)=>b[1].n-a[1].n);
+ return '<div class="rr-head"><img src="assets/uomosul-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>'+(admin?'الإحصائية البحثية للقسم':'البحوث المنشورة — '+esc(name(person)))+'</h2><span>الفلتر: '+esc(filterLabel())+' · تاريخ الإعداد: '+today()+'</span></div></div>'
+  +'<h3>المؤشرات</h3>'+t(['مجموع البحوث','Scopus','Clarivate','عالمية','محلية','Q1 و Q2','مقبولة للنشر'].concat(admin?['باحثون نشطون','نسبة النشر العالمي']:[]),[[st.total,st.scopus,st.clarivate,st.intl,st.local,st.q12,st.accepted].concat(admin?[st.active+' من '+st.staff,st.total?Math.round(st.intl/st.total*100)+'%':'—']:[])])
+  +'<h3>التوزيع حسب التصنيف</h3>'+t(['التصنيف','العدد'],st.byIndex.map(x=>[esc(x[0]),x[1]]))
+  +(admin&&per.length?'<h3>البحوث حسب التدريسي</h3>'+t(['ت','التدريسي','المجموع','Scopus','Clarivate','عالمي','محلي','Q1–Q2'],per.map(([id,o],i)=>[i+1,esc(name(id)),'<b>'+o.n+'</b>',o.scopus,o.clarivate,o.intl,o.local,o.q12])):'')
+  +'<h3>تفاصيل البحوث ('+list.length+')</h3>'+(list.length?t(['ت',...(admin?['التدريسي']:[]),'عنوان البحث','المجلة / المؤتمر','التصنيف','الربع','تاريخ النشر','الحالة','الرابط / DOI'],list.map((r,i)=>[i+1,...(admin?[esc(name(r.teacher))]:[]),esc(r.title),esc(r.journal||'—'),esc(rIndex(r.indexing)[1]),esc(r.quartile||'—'),esc(r.date||'—'),esc(r.status||'منشور'),'<span class="rr-link">'+esc(r.doi||r.link||'—')+'</span>'])):'<p>لا توجد بحوث ضمن هذا الفلتر.</p>')
+  +(admin&&st.idle.length?'<h3>تدريسيو القسم بلا بحوث في هذه الفترة ('+st.idle.length+')</h3><p class="rr-idle">'+st.idle.map(x=>esc(x.name)).join('، ')+'</p>':'')
+  +'<div class="rr-sign"><span>'+(admin?'رئيس القسم':'التدريسي')+': ..............................</span><span>التوقيع: ....................</span><span>التاريخ: '+today()+'</span></div>';
 }
 function researchExport(){
  getSheetJs().then(X=>{
@@ -1328,6 +1358,7 @@ const rff=$('#rFilter');if(rff){
   render()});
 }
 document.querySelectorAll('[data-r-export]').forEach(b=>b.onclick=researchExport);
+document.querySelectorAll('[data-r-print]').forEach(b=>b.onclick=()=>{document.body.classList.add('print-research');const done=()=>{document.body.classList.remove('print-research');removeEventListener('afterprint',done)};addEventListener('afterprint',done);print();setTimeout(done,1500)});
 document.querySelectorAll('[data-subjects]').forEach(b=>b.onclick=()=>subjectsDialog(b.dataset.subjects));
 document.querySelectorAll('[data-cal-day]').forEach(b=>b.onclick=()=>{const p=plan(),v=b.dataset.calDay;if(p.dates.includes(v)){p.dates=p.dates.filter(x=>x!==v);delete p.grid[v]}else p.dates.push(v);commit()});
 document.querySelectorAll('[data-cal-nav]').forEach(b=>b.onclick=()=>{const [y,m]=calMonth.split('-').map(Number),d=new Date(y,m-1+Number(b.dataset.calNav),1);calMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');render()});
