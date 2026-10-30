@@ -21,6 +21,19 @@ service cloud.firestore {
       return signedIn() && exists(path) && get(path).data.get('email', '').lower() == myEmail();
     }
 
+    // الصلاحيات المحدودة: { roles: { "<email>": "secretary" | "timetable" | "grad" } } يمنحها رئيس القسم
+    function rolesPath() { return /databases/$(database)/documents/config/roles; }
+    function hasRole(r) {
+      return signedIn() && exists(rolesPath()) && get(rolesPath()).data.get('roles', {}).get(myEmail(), '') == r;
+    }
+    function onlyStateKeys(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    match /config/roles {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     // قائمة المشرفين. أول مستخدم جامعي يمكنه إنشاؤها بحسابه فقط، ثم يديرها المشرفون.
     match /config/admins {
       allow read: if signedIn();
@@ -34,6 +47,14 @@ service cloud.firestore {
         && col in ['teachers', 'announcements', 'courses', 'invigilation', 'tasks', 'committees', 'polls', 'meta'];
       allow write: if isAdmin()
         && col in ['teachers', 'announcements', 'courses', 'invigilation', 'tasks', 'committees', 'polls', 'meta'];
+      // مقرر القسم: التبليغات ومرفقاتها والتكليفات واللجان والأسئلة. مسؤول الجداول: المواد والمراقبات
+      allow write: if (hasRole('secretary') && (col in ['announcements', 'tasks', 'committees', 'polls'] || (col == 'meta' && id.matches('f_.*'))))
+        || (hasRole('timetable') && col in ['courses', 'invigilation']);
+      // كل صلاحية تعدّل مفاتيحها فقط من الحالة المشتركة meta/state
+      allow update: if col == 'meta' && id == 'state' && (
+        (hasRole('secretary') && onlyStateKeys(['letters', 'letterCfg', 'grad']))
+        || (hasRole('timetable') && onlyStateKeys(['schedule', 'ttSections', 'examPlan', 'ttPlans', 'ttTerm', 'scheduleStale']))
+        || (hasRole('grad') && onlyStateKeys(['grad'])));
     }
 
     // البحوث الأكاديمية: يقرؤها كل حساب جامعي، ويضيف التدريسي بحوثه ويعدّلها ويحذفها، والمشرفون للجميع

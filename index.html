@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>رئاسة القسم الذكية</title>
-<link rel="icon" type="image/png" href="assets/favicon-64.png"><link rel="apple-touch-icon" href="assets/college-logo-192.png"><meta name="theme-color" content="#0f2747">
+<link rel="icon" type="image/png" href="assets/favicon-64.png"><link rel="apple-touch-icon" href="assets/icon-192.png"><link rel="manifest" href="manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="رئاسة القسم"><meta name="theme-color" content="#0f2747">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -52,6 +52,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .card small{color:var(--muted);font-size:13px}
 .card b{font-size:32px;display:block;margin-top:8px;font-variant-numeric:tabular-nums}
 .card.danger b{color:var(--danger)}
+.role-help{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:8px 0 12px}.role-help div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}.role-help small{display:block;color:var(--muted)}
+.share-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+.g-in{min-width:180px;width:100%;font:inherit;padding:4px 8px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);color:var(--text)}
+.g-filters input,.g-filters select{width:auto;min-width:130px}
+select[data-g-sup]{min-width:160px}select[data-g-status]{min-width:125px}
+.install-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.install-steps ol{margin:6px 0;padding-inline-start:20px;line-height:1.9}
+.app-hint{margin:8px 0}
 .card.stat{cursor:default}.card.stat:hover{border-color:var(--line)}.card.stat b{font-size:20px}
 section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:20px;box-shadow:var(--shadow)}
 section.editing{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
@@ -474,15 +481,15 @@ button.link{all:unset;cursor:pointer;color:var(--primary);text-decoration:underl
 <body>
 <aside id="sidebar"><div class="brand"><div class="brand-logo"><img src="assets/college-logo-192.png" alt="شعار كلية الإدارة والاقتصاد" width="76" height="76"></div><small>جامعة الموصل · كلية الإدارة والاقتصاد</small><h1>رئاسة القسم الذكية</h1><small>قسم إدارة الأعمال</small></div><nav id="nav" aria-label="أقسام التطبيق"></nav></aside>
 <div class="overlay" id="overlay"></div>
-<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><img class="top-logo" src="assets/college-logo-192.png" alt="" width="40" height="40"><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
+<main><header class="top"><button class="icon-btn menu-btn" id="menu" aria-label="إخفاء القائمة" aria-controls="sidebar">☰</button><img class="top-logo" src="assets/college-logo-192.png" alt="" width="40" height="40"><div style="flex:1"><small id="date"></small><h1 id="title">نظرة عامة</h1></div><div class="top-tools"><span class="badge" id="modeBadge">نسخة تجريبية · حفظ محلي</span><span class="who" id="who"></span><button class="icon-btn" id="installBtn" hidden aria-label="تثبيت التطبيق على الجهاز" title="تثبيت التطبيق على الجهاز">📲</button><button class="icon-btn" id="notifBtn" hidden aria-label="تفعيل الإشعارات" title="تفعيل الإشعارات">🔔</button><button class="icon-btn" id="theme" aria-label="تبديل المظهر الفاتح والداكن" title="تبديل المظهر">◐</button></div></header>
 <details class="notice" id="notice"><summary id="noticeSummary">نسخة تجريبية: البيانات محفوظة على هذا المتصفح فقط</summary><p id="noticeText">لا تتزامن البيانات بين الأجهزة، فصدّر نسخة احتياطية دورياً. تبديل العرض إلى «تدريسي» للتجربة وليس تسجيل دخول أو صلاحيات آمنة. الملفات المرفقة تُسجّل أسماؤها فقط ولا تُرفع إلى خادم.</p></details>
 <div class="print-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد</b><span>قسم إدارة الأعمال</span></div></div><div id="gate" class="gate" hidden></div><div id="view"></div><footer>رئاسة القسم الذكية · <a href="https://github.com/AliAlsaffarMosulUniversity/ALAWI/archive/refs/heads/main.zip">تحميل المشروع ZIP</a></footer></main><div id="toast" role="status" aria-live="polite"></div><div id="syncBar" role="status"><span>وصلت تحديثات من جهاز آخر.</span><button class="btn-sm" id="syncApply">عرض التحديثات</button></div>
 <script src="firebase-config.js"></script>
 <script>
 'use strict';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','الحماية والنسخ الاحتياطي','الإدارة واستيراد Excel','العبء التدريسي','البحث الأكاديمي','الكتب الإدارية'];
-const navGroups=[['الرئيسية',[0]],['الكادر',[1,6]],['التدريس',[3,4,10]],['البحث العلمي',[11]],['التواصل والمتابعة',[2,12,5,7]],['البيانات',[9,8]]];
+const pages=['نظرة عامة','التدريسيون','التبليغات','الجداول الذكية','المراقبات','التكليفات','اللجان','الأسئلة والاستبيانات','الحماية والنسخ الاحتياطي','الإدارة واستيراد Excel','العبء التدريسي','البحث الأكاديمي','الكتب الإدارية','بحوث التخرج'];
+const navGroups=[['الرئيسية',[0]],['الكادر',[1,6]],['التدريس',[3,4,10]],['البحث العلمي',[11,13]],['التواصل والمتابعة',[2,12,5,7]],['البيانات',[9,8]]];
 const key='smart-department-v1';
 const initial={teachers:[],announcements:[],courses:[],schedule:[],invigilation:[],tasks:[],committees:[],polls:[],research:[]};
 let db;try{db=JSON.parse(localStorage.getItem(key))||structuredClone(initial)}catch{db=structuredClone(initial)}
@@ -491,13 +498,21 @@ let viewAs=(()=>{try{return localStorage.getItem('smart-department-view')||''}ca
 let schedStudy='morning',schedStage=2;
 let page=0,role='admin',person='',editing=null,scheduleFilter='',scheduleMsg=null,toastTimer;
 const CORE=['teachers','announcements','courses','invigilation','tasks','committees','polls'];
-const TEACHER_PAGES=[0,2,3,4,5,6,7,11];
+const TEACHER_PAGES=[0,2,3,4,5,6,7,11,13];
 const DOMAIN=window.ALLOWED_DOMAIN||'uomosul.edu.iq';
 const cloud={on:!!window.FIREBASE_CONFIG,user:null,admins:null,admin:false,teacherId:'',ready:false,dirty:false,raw:{},shadow:{},loaded:new Set(),unsubs:[],wlUnsub:null};
 const localData=db;
 // رئيس القسم يستطيع معاينة النظام كما يراه أي تدريسي (viewAs)، دون أن يفقد صلاحيته
 const realAdmin=()=>cloud.on?cloud.admin:true;
-const isAdmin=()=>realAdmin()&&!viewAs;
+// صلاحيات محدودة يمنحها رئيس القسم من صفحة الإدارة (config/roles)، وتفرضها قواعد firestore.rules أيضاً:
+// صاحب الصلاحية يعدّل صفحاته فقط، ويرى بقية النظام كأي تدريسي
+const ROLES={
+ secretary:{label:'مقرر القسم',pages:[2,5,6,7,12,13],cols:['announcements','tasks','committees','polls'],meta:['letters','letterCfg','grad']},
+ timetable:{label:'مسؤول الجداول والمراقبات',pages:[3,4],cols:['courses','invigilation'],meta:['schedule','ttSections','examPlan','ttPlans','ttTerm','scheduleStale']},
+ grad:{label:'مسؤول بحوث التخرج',pages:[13],cols:[],meta:['grad']}};
+const myRole=()=>cloud.on&&cloud.ready&&!cloud.admin?ROLES[cloud.role]||null:null;
+const isAdmin=()=>realAdmin()&&!viewAs||!!myRole()?.pages.includes(page);
+const canPage=p=>realAdmin()&&!viewAs||TEACHER_PAGES.includes(p)||!!myRole()?.pages.includes(p);
 const ownTeacher=()=>cloud.on?cloud.teacherId:'';
 const previewOther=()=>!!viewAs&&cloud.on&&viewAs!==cloud.teacherId;
 function applyView(){
@@ -507,7 +522,7 @@ function applyView(){
 function setViewAs(v){
  viewAs=v;try{v?localStorage.setItem('smart-department-view',v):localStorage.removeItem('smart-department-view')}catch{}
  editing=null;scheduleFilter='';scheduleMsg=null;applyView();
- if(!isAdmin()&&!TEACHER_PAGES.includes(page))page=0;
+ if(!canPage(page))page=0;
  if(!isAdmin()&&page===3&&person)scheduleFilter='t:'+person;
  render();scrollTo(0,0);toast(v?'تشاهد الآن النظام كما يراه التدريسي':'عدت إلى عرض رئيس القسم');
 }
@@ -560,7 +575,7 @@ function actions(f,id){if(!isAdmin())return '';return '<span class="row-actions"
 function formTitle(f,add,edit){return editing?.form===f?edit:add}
 function overdue(t){return !t.done&&!!t.due&&t.due<today()}
 function upsert(f,rec){const col=COLS[f],id=editId(f);if(id){const i=db[col].findIndex(x=>x.id===id);db[col][i]={...db[col][i],...rec}}else db[col].push({id:uid(),...rec});editing=null}
-function teacherRefs(id){return [['مادة',db.courses.filter(c=>c.teacher===id).length],['تكليف',db.tasks.filter(t=>t.teacher===id).length],['مراقبة',db.invigilation.filter(x=>x.teacher===id).length],['لجنة',db.committees.filter(c=>c.chair===id||c.members.includes(id)).length],['سجل عبء',(db.workloads||[]).filter(w=>w.teacher===id).length]].filter(([,n])=>n)}
+function teacherRefs(id){return [['مادة',db.courses.filter(c=>c.teacher===id).length],['تكليف',db.tasks.filter(t=>t.teacher===id).length],['مراقبة',db.invigilation.filter(x=>x.teacher===id).length],['لجنة',db.committees.filter(c=>c.chair===id||c.members.includes(id)).length],['سجل عبء',(db.workloads||[]).filter(w=>w.teacher===id).length],['طالب تخرج',(db.grad?.students||[]).filter(s=>s.supervisor===id).length]].filter(([,n])=>n)}
 function remove(f,id){
  const col=COLS[f];
  if(col==='teachers'){const refs=teacherRefs(id);if(refs.length)return toast('لا يمكن حذف التدريسي لارتباطه بـ: '+refs.map(([l,n])=>n+' '+l).join('، ')+'. احذفها أو انقلها أولاً.')}
@@ -649,7 +664,7 @@ function dashboard(){
  if(cloud.on&&prot.denied)alerts.push(['warn','النسخ الاحتياطي التلقائي متوقف: قواعد الحماية في Firebase تحتاج تحديثاً',8,'التفاصيل']);
  else if(db.teachers.length&&Date.now()-lastLocalBackup()>30*864e5)alerts.push(['warn','لم تنزّل نسخة احتياطية على جهازك منذ أكثر من شهر',8,'تنزيل نسخة']);
  if(db.scheduleStale&&db.schedule.length)alerts.push(['warn','تغيّرت المواد أو التدريسيون بعد آخر توليد للجدول',3,'إعادة التوليد']);
- return migrate+'<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
+ return migrate+appHints()+'<div class="cards">'+cards.map(([p,t,n,c])=>'<button class="card '+c+'" data-page="'+p+'"><small>'+t+'</small><b>'+n+'</b></button>').join('')+'</div>'
  +alerts.map(([c,t,p,l])=>'<div class="alert '+c+'"><span>'+t+'</span><button data-page="'+p+'">'+l+'</button></div>').join('')
  +(db.teachers.length?'':section('ابدأ بإعداد القسم','<p>أضف التدريسيين وأيام تواجدهم، ثم أدخل المواد لتوليد جدول أولي يراعي تعارض التدريسي والقاعة. يمكنك أيضاً استيراد قائمة التدريسيين من Excel.</p><div class="tools"><button data-page="1">إضافة التدريسيين</button><button class="secondary" data-page="9">استيراد من Excel</button></div>'))
  +'<div class="grid">'+section('متابعة التكليفات',open.sort((a,b)=>String(a.due).localeCompare(b.due)).slice(0,6).map(t=>'<div class="item"><strong>'+esc(t.title)+'</strong><div class="muted">'+esc(name(t.teacher))+' · '+esc(t.due)+' '+(overdue(t)?pill('danger','متأخرة'):'')+'</div></div>').join('')||'<p class="empty">لا توجد مهام معلقة</p>')
@@ -672,7 +687,69 @@ function teacherDashboard(){
  const dayBox=section('📅 يومك',(todayLessons.length?'<ol class="t-timeline">'+todayLessons.map(s=>'<li><span dir="ltr">'+esc(s.slot)+'</span><b>'+esc(s.course)+'</b><small>'+esc(s.room||'')+'</small></li>').join('')+'</ol>':'<p class="t-quiet">'+(todayName?'لا محاضرات لديك اليوم. وقت مناسب للبحث والقراءة 📖':'عطلة نهاية الأسبوع، استمتع بوقتك 🌿')+'</p>')
   +(inv[0]?'<div class="t-next"><span class="t-count">'+daysUntil(inv[0].date)+'</span><div><b>'+esc(inv[0].exam||'مراقبة امتحانية')+'</b><small>'+[esc(inv[0].date),inv[0].start?'<span dir="ltr">'+esc(inv[0].start)+(inv[0].end?' – '+esc(inv[0].end):'')+'</span>':'',esc(inv[0].room)].filter(Boolean).join(' · ')+'</small></div></div>'+(inv.length>1?'<p class="muted">و'+(inv.length-1)+' مراقبة أخرى في <button class="link" data-page="4">جدول المراقبات</button></p>':''):''));
  const workBox=section('🎯 مهامي ولجاني',(mine.map(t=>'<div class="t-row"><span>'+esc(t.title)+'</span>'+(overdue(t)?pill('danger','متأخرة'):t.due?pill('info',daysUntil(t.due)):'')+'</div>').join('')+(com.length?'<div class="chips t-coms">'+com.map(c=>'<span class="chip">'+(c.chair===person?'⭐ ':'')+esc(c.title)+'</span>').join('')+'</div>':''))||'<p class="t-quiet">لا مهام مفتوحة. عمل رائع! 🌟</p>');
- return '<div class="t-home">'+hero+tcards+section('🗓️ جدولي الأسبوعي',myWeek(person))+'<div class="grid">'+annBox+'<div>'+dayBox+workBox+'</div></div></div>';
+ const gs=(db.grad?.students||[]).filter(s=>s.supervisor===person);
+ return '<div class="t-home">'+hero+appHints()+tcards+section('🗓️ جدولي الأسبوعي',myWeek(person))+(gs.length?section('🎓 طلبتي في بحوث التخرج ('+gs.length+')','<div class="chips">'+gs.map(s=>'<span class="chip">'+esc(s.name)+' '+gradPill(s.status)+'</span>').join('')+'</div><p><button class="link" data-page="13">التفاصيل</button></p>'):'')+'<div class="grid">'+annBox+'<div>'+dayBox+workBox+'</div></div></div>';
+}
+// ===== الإشعارات والتثبيت على الهاتف =====
+// يصل إشعار النظام عند نشر تبليغ أو إسناد تكليف جديد والتطبيق مفتوح أو مثبّت ويعمل في الخلفية،
+// وتظهر على أيقونة التطبيق المثبّت شارة بعدد ما لم يُقرأ. الإشعار والتطبيق مغلق تماماً يحتاج خادماً غير متاح في الخطة المجانية،
+// لذا يُرسل رئيس القسم التبليغ المهم بالبريد أو واتساب بضغطة من صفحة التبليغات.
+const notifOK=()=>'Notification' in window&&'serviceWorker' in navigator;
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
+let installEvt=null;
+const canInstall=()=>!standalone()&&(!!installEvt||isIOS()||/android/i.test(navigator.userAgent));
+const wantNotif=()=>cloud.on&&!!cloud.user&&notifOK()&&Notification.permission==='default';
+function syncPwaButtons(){const i=$('#installBtn'),n=$('#notifBtn');if(i)i.hidden=!canInstall();if(n)n.hidden=!wantNotif()}
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;syncPwaButtons();if(page===0)render()});
+addEventListener('appinstalled',()=>{installEvt=null;syncPwaButtons();toast('تم تثبيت التطبيق على جهازك 🎉')});
+async function installApp(){
+ if(installEvt){installEvt.prompt();const r=await installEvt.userChoice.catch(()=>({}));installEvt=null;syncPwaButtons();if(r.outcome==='accepted')toast('جارٍ تثبيت التطبيق…');if(page===0)render();return}
+ ttModal('<form method="dialog" class="dlg"><h3>📲 تثبيت التطبيق على الهاتف</h3>'
+  +'<div class="install-steps"><div><b>آيفون (Safari)</b><ol><li>افتح رابط التطبيق في متصفح <b>Safari</b>.</li><li>اضغط زر المشاركة <b>⬆️</b> أسفل الشاشة.</li><li>اختر <b>«إضافة إلى الشاشة الرئيسية»</b> ثم «إضافة».</li></ol></div>'
+  +'<div><b>أندرويد (Chrome)</b><ol><li>افتح رابط التطبيق في <b>Chrome</b>.</li><li>اضغط قائمة <b>⋮</b> أعلى الشاشة.</li><li>اختر <b>«تثبيت التطبيق»</b> أو «إضافة إلى الشاشة الرئيسية».</li></ol></div></div>'
+  +'<p class="muted">بعد التثبيت يظهر شعار الكلية على شاشة هاتفك ويفتح التطبيق كتطبيق مستقل. على الآيفون تعمل الإشعارات بعد التثبيت فقط.</p><div class="form-actions"><button data-close>حسناً</button></div></form>',()=>{});
+}
+async function enableNotif(){
+ if(!notifOK())return toast(isIOS()&&!standalone()?'على الآيفون ثبّت التطبيق على الشاشة الرئيسية أولاً، ثم فعّل الإشعارات من داخله':'هذا المتصفح لا يدعم الإشعارات');
+ const p=await Notification.requestPermission();syncPwaButtons();
+ if(p==='granted'){showNote('🔔 تم تفعيل الإشعارات','ستصلك هنا التبليغات والتكليفات الجديدة.','welcome');toast('تم تفعيل الإشعارات')}
+ else toast('لم تُفعَّل الإشعارات؛ يمكنك تفعيلها لاحقاً من إعدادات المتصفح');
+ render();
+}
+async function showNote(title,body,tag){
+ const opt={body,tag,icon:'assets/icon-192.png',badge:'assets/favicon-64.png',dir:'rtl',lang:'ar',data:{url:'./'}};
+ try{const r=await navigator.serviceWorker?.getRegistration();if(r)return await r.showNotification(title,opt)}catch{}
+ try{new Notification(title,opt)}catch{}
+}
+const seenKey=()=>'smart-department-seen-'+(cloud.user?.email||'local');
+function notifyNew(){
+ if(!cloud.ready||!person)return;
+ const items=[...db.announcements.filter(a=>!a.read.includes(person)).map(a=>['a'+a.id,'📢 تبليغ جديد',a.title]),...db.tasks.filter(t=>t.teacher===person&&!t.done).map(t=>['t'+t.id,'📝 تكليف جديد',t.title+(t.due?' · الموعد '+t.due:'')])];
+ try{items.length?navigator.setAppBadge?.(items.length)?.catch(()=>{}):navigator.clearAppBadge?.()?.catch(()=>{})}catch{}
+ let seen=null;try{seen=JSON.parse(localStorage.getItem(seenKey()))}catch{}
+ const ids=items.map(x=>x[0]);
+ try{localStorage.setItem(seenKey(),JSON.stringify([...new Set([...(seen||[]),...ids])].slice(-500)))}catch{}
+ if(!Array.isArray(seen))return;
+ const fresh=items.filter(x=>!seen.includes(x[0]));if(!fresh.length)return;
+ if(notifOK()&&Notification.permission==='granted'&&(document.hidden||!document.hasFocus()))fresh.slice(0,3).forEach(([id,t,b])=>showNote(t,b,id));
+ else toast(fresh[0][1]+': '+fresh[0][2]);
+}
+function appHints(){
+ const h=[];
+ if(wantNotif())h.push('<div class="alert ok app-hint"><span>🔔 فعّل الإشعارات لتصلك التبليغات والتكليفات الجديدة فور نشرها.</span><button data-action="notif">تفعيل الإشعارات</button></div>');
+ if(canInstall())h.push('<div class="alert ok app-hint"><span>📲 ثبّت التطبيق على هاتفك ليفتح بضغطة من الشاشة الرئيسية كأي تطبيق.</span><button class="secondary" data-action="install">تثبيت التطبيق</button></div>');
+ return h.join('');
+}
+// إرسال التبليغ خارج التطبيق: بريد جيميل الجامعي (نسخة مخفية لكل التدريسيين) أو واتساب
+function shareAnn(kind,id){
+ const a=db.announcements.find(x=>x.id===id);if(!a)return;
+ const link=location.origin+location.pathname,mails=[...new Set(db.teachers.map(t=>(t.email||'').trim().toLowerCase()).filter(e=>/^[^@\s]+@[^@\s]+$/.test(e)))];
+ const text=t=>'📢 '+a.title+(a.body?'\n\n'+a.body.slice(0,t)+(a.body.length>t?'…':''):'')+(attachList(a).length?'\n\n📎 للتبليغ مرفقات في التطبيق.':'')+'\n\nرئاسة قسم إدارة الأعمال\n'+link;
+ if(kind==='wa')return open('https://wa.me/?text='+encodeURIComponent(text(900)),'_blank','noopener');
+ if(!mails.length)return toast('لا توجد عناوين بريد في دليل التدريسيين');
+ if(kind==='copy')return navigator.clipboard.writeText(mails.join(', ')).then(()=>toast('نُسخ '+mails.length+' عنوان بريد؛ الصقها في حقل «نسخة مخفية Bcc»')).catch(()=>prompt('انسخ العناوين:',mails.join(', ')));
+ open('https://mail.google.com/mail/?view=cm&fs=1&bcc='+encodeURIComponent(mails.join(','))+'&su='+encodeURIComponent('تبليغ: '+a.title)+'&body='+encodeURIComponent(text(350)),'_blank','noopener');
 }
 function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length,all=db.teachers.length;return pill(all&&n===all?'ok':'info','قرأه '+n+' من '+all)}
 function teachersView(){
@@ -689,7 +766,7 @@ function announcementsView(){
  const list=db.announcements.slice().reverse().map(a=>{
   const unread=db.teachers.filter(t=>!a.read.includes(t.id));
   return '<article class="item"><div class="item-head"><h3>'+esc(a.title)+'</h3>'+(admin?actions('announcement',a.id):'')+'</div>'+(a.body?'<p class="pre">'+esc(a.body)+'</p>':'')+attachment(a)+'<p class="muted">'+esc(a.date)+(a.file&&!a.fileData&&!attachList(a).length?' · مرفق لم يُحفظ ('+esc(a.file)+')، أعد إرفاقه من «تعديل»':'')+'</p>'
-  +(admin?readPill(a)+(unread.length&&db.teachers.length?'<details class="unread"><summary>لم يؤكد القراءة ('+unread.length+')</summary><p class="muted">'+unread.map(t=>esc(t.name)).join('، ')+'</p></details>':'')
+  +(admin?'<div class="share-row">'+readPill(a)+'<button class="btn-sm secondary" data-share="mail|'+a.id+'" title="يفتح رسالة في بريدك الجامعي إلى كل التدريسيين">📧 إرسال بالبريد</button><button class="btn-sm secondary" data-share="wa|'+a.id+'" title="يفتح واتساب لاختيار مجموعة القسم">💬 واتساب</button><button class="btn-sm secondary" data-share="copy|'+a.id+'">📋 نسخ عناوين البريد</button></div>'+(unread.length&&db.teachers.length?'<details class="unread"><summary>لم يؤكد القراءة ('+unread.length+')</summary><p class="muted">'+unread.map(t=>esc(t.name)).join('، ')+'</p></details>':'')
    :person?(a.read.includes(person)?pill('ok','تمت القراءة'):'<button class="btn-sm" data-read="'+a.id+'">تأكيد القراءة</button>'):'<span class="muted">'+(cloud.on?'حسابك غير مرتبط بسجل تدريسي':'اختر التدريسي لتأكيد القراءة')+'</span>')+'</article>';
  }).join('');
  return (admin?section(formTitle('announcement','إنشاء تبليغ','تعديل التبليغ'),form('announcement',field('title','عنوان التبليغ','text',true,'full')+'<label class="full">نص التبليغ<textarea name="body"></textarea></label>'+'<label>مرفقات: صور أو ملفات PDF (حتى '+ATTACH_COUNT+'، والملف حتى 10 ميغابايت)<input name="file" type="file" accept="image/*,.pdf" multiple></label>'+keptAttachments(),'نشر التبليغ')):'')
@@ -1350,8 +1427,8 @@ function pollsView(){
 // النقاط والسجل في مجموعتي backups و audit (قواعد firestore.rules): يقرؤهما المشرفون فقط، والسجل لا يُعدَّل ولا يُحذف.
 const SNAP_KEEP=20,SNAP_EVERY=864e5,BULK_DEL=10;
 const COUNT_KEYS=[['teachers','تدريسي'],['announcements','تبليغ'],['courses','مادة'],['research','بحث'],['schedule','حصة'],['tasks','تكليف'],['committees','لجنة'],['polls','سؤال'],['letters','كتاب'],['workloads','عبء']];
-const LOG_COLS={teachers:'تدريسي',announcements:'تبليغ',courses:'مادة',invigilation:'مراقبة',tasks:'تكليف',committees:'لجنة',polls:'سؤال',workloads:'عبء تدريسي',answers:'إجابة',research:'بحث',meta:'إعدادات'};
-const META_LABELS={schedule:'الجداول الدراسية',ttSections:'شعب الجداول',examPlan:'خطة المراقبات',ttPlans:'الخطط الدراسية',ttTerm:'الفصل الدراسي',letters:'الكتب الإدارية',letterCfg:'إعدادات الكتب',workloadMeta:'إعدادات العبء التدريسي'};
+const LOG_COLS={grad:'بحوث التخرج',teachers:'تدريسي',announcements:'تبليغ',courses:'مادة',invigilation:'مراقبة',tasks:'تكليف',committees:'لجنة',polls:'سؤال',workloads:'عبء تدريسي',answers:'إجابة',research:'بحث',meta:'إعدادات'};
+const META_LABELS={schedule:'الجداول الدراسية',ttSections:'شعب الجداول',examPlan:'خطة المراقبات',ttPlans:'الخطط الدراسية',ttTerm:'الفصل الدراسي',letters:'الكتب الإدارية',letterCfg:'إعدادات الكتب',grad:'بحوث التخرج',workloadMeta:'إعدادات العبء التدريسي'};
 const LOG_ACTS={add:['ok','إضافة'],edit:['info','تعديل'],del:['danger','حذف']};
 const prot={snaps:null,log:null,logLimit:100,loading:false,denied:false,busy:'',filter:''};
 const lastLocalBackup=()=>{try{return Number(localStorage.getItem('smart-department-lastbackup'))||0}catch{return 0}};
@@ -1426,7 +1503,7 @@ function auditChanges(ops){
 function writeAudit(changes){
  if(!changes.length||prot.auditDenied)return;
  const {collection,addDoc}=cloud.sdk;
- addDoc(collection(cloud.fs,'audit'),{t:Date.now(),email:(cloud.user?.email||'').toLowerCase(),who:whoAmI(),admin:!!cloud.admin,changes})
+ addDoc(collection(cloud.fs,'audit'),{t:Date.now(),email:(cloud.user?.email||'').toLowerCase(),who:whoAmI(),admin:!!cloud.admin,role:cloud.role||'',changes})
   .then(()=>{prot.log=null;if(page===8&&!editing)loadProtection()})
   .catch(e=>{if(e.code==='permission-denied')prot.auditDenied=true});
 }
@@ -1503,7 +1580,7 @@ function backupView(){
  let log='';
  if(cloud.on&&!prot.denied){
   const f=prot.filter,people=[...new Set((prot.log||[]).map(e=>e.who||e.email))];
-  const rows=(prot.log||[]).filter(e=>!f||(e.who||e.email)===f).flatMap(e=>e.changes.map((c,i)=>{const [cls,txt]=LOG_ACTS[c.a]||['info',c.a];return [esc(fmtTime(e.t)),esc(e.who||e.email)+(e.admin?'':' '+pill('info','تدريسي')),pill(cls,txt),esc(LOG_COLS[c.c]||c.c),esc(c.label||'—'),c.a==='del'&&c.prev?'<button class="btn-sm secondary" data-undo="'+esc(e.id)+'|'+i+'">↩️ استعادة</button>':'']}));
+  const rows=(prot.log||[]).filter(e=>!f||(e.who||e.email)===f).flatMap(e=>e.changes.map((c,i)=>{const [cls,txt]=LOG_ACTS[c.a]||['info',c.a];return [esc(fmtTime(e.t)),esc(e.who||e.email)+(e.admin?'':' '+pill('info',ROLES[e.role]?.label||'تدريسي')),pill(cls,txt),esc(LOG_COLS[c.c]||c.c),esc(c.label||'—'),c.a==='del'&&c.prev?'<button class="btn-sm secondary" data-undo="'+esc(e.id)+'|'+i+'">↩️ استعادة</button>':'']}));
   log=section('سجل التغييرات','<p class="muted">يُسجَّل تلقائياً كل ما يُضاف أو يُعدَّل أو يُحذف: من قام به ومتى. لا يمكن لأحد تعديل السجل أو حذفه، والسجلات المحذوفة يمكن استعادتها من هنا بضغطة.</p>'
    +(prot.auditDenied?RULES_HELP:'')
    +'<div class="tools"><label>عرض تغييرات <select id="logWho"><option value="">الجميع</option>'+people.map(x=>'<option'+(x===f?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><button class="secondary" data-action="logRefresh">🔄 تحديث</button></div>'
@@ -1516,6 +1593,112 @@ function bindProtection(){
  document.querySelectorAll('[data-snap-dl]').forEach(b=>b.onclick=()=>downloadSnap(b.dataset.snapDl));
  document.querySelectorAll('[data-undo]').forEach(b=>b.onclick=()=>{const [id,i]=b.dataset.undo.split('|');undoDeleted(id,Number(i))});
  const w=$('#logWho');if(w)w.onchange=()=>{prot.filter=w.value;render()};
+}
+// ===== بحوث التخرج: طلبة المرحلة الرابعة، توزيعهم على المشرفين بالتساوي، ومتابعة مراحل الإنجاز =====
+// تُحفظ في meta/state (المفتاح grad) فيراها كل تدريسي، ويعدّلها رئيس القسم ومن يملك صلاحيتها.
+const GRAD_STATUS=['لم يبدأ','العنوان معتمد','قيد الإنجاز','المسودة مسلّمة','نوقش'];
+const gradDefault=()=>({year:'2025-2026',students:[],supervisors:[],max:0});
+const grad=()=>db.grad||gradDefault();
+const gradEdit=()=>(db.grad??=gradDefault());
+const gradPill=st=>{const i=Math.max(0,GRAD_STATUS.indexOf(st));return pill(i===4?'ok':i===0?'warn':'info',GRAD_STATUS[i])};
+const studyLabel=s=>s==='evening'?'مسائي':'صباحي';
+let gf={q:'',study:'',sup:'',status:''};
+function gradLoads(g){const m={};g.supervisors.forEach(id=>m[id]=0);g.students.forEach(s=>{if(s.supervisor)m[s.supervisor]=(m[s.supervisor]||0)+1});return m}
+// ملاءمة الطالب للمشرف: تطابق حقل عنوان البحث مع تخصص التدريسي أو المواد التي يدرّسها
+function gradFit(title,id){
+ const tf=fieldsOf(title||'');tf.delete('اداره');if(!tf.size)return 0;
+ const t=db.teachers.find(x=>x.id===id),mine=new Set([...fieldsOf(t?.specialty||''),...sched().filter(x=>x.teacher===id).flatMap(x=>[...fieldsOf(x.course)])]);
+ return [...tf].filter(f=>mine.has(f)).length;
+}
+function distributeGrad(sup,max,all){
+ const g=gradEdit();g.supervisors=sup;g.max=max||0;
+ g.students.forEach(s=>{if(all||s.supervisor&&!sup.includes(s.supervisor))s.supervisor=''});
+ const load=Object.fromEntries(sup.map(id=>[id,0]));g.students.forEach(s=>{if(s.supervisor in load)load[s.supervisor]++});
+ // الحصة المتساوية لكل مشرف (أو الحد الأعلى إن كان أقل)، وضمنها يُفضَّل الأقرب تخصصاً لعنوان البحث
+ const share=Math.ceil(g.students.length/sup.length),cap=max?Math.min(max,share):share;
+ const todo=g.students.filter(s=>!s.supervisor).map(s=>({s,fits:sup.map(id=>gradFit(s.title,id))}));
+ // الطلبة ذوو العناوين الأوضح تخصصاً يُوزَّعون أولاً حتى لا تمتلئ حصة المشرف المناسب بغيرهم
+ todo.sort((a,b)=>Math.max(...b.fits)-Math.max(...a.fits));
+ let left=0;
+ for(const {s,fits} of todo){
+  let free=sup.map((id,i)=>[id,fits[i]]).filter(([id])=>load[id]<cap);
+  if(!free.length)free=sup.map((id,i)=>[id,fits[i]]).filter(([id])=>!max||load[id]<max);
+  if(!free.length){left++;continue}
+  const best=free.map(([id,f])=>[id,f,load[id],Math.random()]).sort((a,b)=>b[1]-a[1]||a[2]-b[2]||a[3]-b[3])[0][0];
+  s.supervisor=best;load[best]++;
+ }
+ return left;
+}
+function gradList(){
+ const q=gf.q.trim();
+ return grad().students.filter(s=>(!gf.study||s.study===gf.study)&&(!gf.sup||(gf.sup==='-'?!s.supervisor:s.supervisor===gf.sup))&&(!gf.status||s.status===gf.status)&&(!q||(s.name+' '+(s.title||'')).includes(q)));
+}
+function gradView(){
+ const g=grad(),ed=isAdmin();
+ if(!ed){
+  const list=g.students.filter(s=>s.supervisor===person);
+  return section('🎓 طلبتي في بحوث التخرج · '+esc(g.year)+' ('+list.length+')',list.length?table(['ت','الطالب','الدراسة / الشعبة','عنوان البحث','الحالة'],list.map((s,i)=>[i+1,esc(s.name),studyLabel(s.study)+(s.section?' / '+esc(s.section):''),esc(s.title||'—'),gradPill(s.status)])):'<p class="empty">لم يُسند إليك طلبة في بحوث التخرج لهذا العام بعد.</p>');
+ }
+ const loads=gradLoads(g),staff=db.teachers.filter(t=>!isExternal(t)),ext=db.teachers.filter(isExternal),list=gradList();
+ const assigned=g.students.filter(s=>s.supervisor).length,done=g.students.filter(s=>s.status===GRAD_STATUS[4]).length;
+ const cards='<div class="cards"><div class="card stat"><small>طلبة التخرج</small><b>'+g.students.length+'</b></div><div class="card stat'+(g.students.length&&assigned<g.students.length?' danger':'')+'"><small>بلا مشرف</small><b>'+(g.students.length-assigned)+'</b></div><div class="card stat"><small>المشرفون</small><b>'+Object.keys(loads).filter(id=>loads[id]).length+'</b></div><div class="card stat"><small>نوقشت بحوثهم</small><b>'+done+'</b></div></div>';
+ const supChip=t=>'<label class="chip"><input type="checkbox" name="sup" value="'+esc(t.id)+'"'+(g.supervisors.includes(t.id)?' checked':'')+'>'+esc(t.name)+(loads[t.id]?' <small>('+loads[t.id]+')</small>':'')+'</label>';
+ const students=section('الطلبة','<div class="tools"><button data-action="gradImport">📥 استيراد الطلبة من Excel</button><button class="secondary" data-action="gradTemplate">تنزيل نموذج Excel</button><input id="gradFile" type="file" accept=".xlsx,.xls" hidden></div><p class="muted">أعمدة الملف: اسم الطالب، الدراسة (صباحي/مسائي)، الشعبة، عنوان البحث (اختياري)، المشرف (اختياري). الأسماء المكررة تُتجاوز.</p>'
+  +form('gradStudent',field('name','اسم الطالب','text',true)+'<label>الدراسة<select name="study"><option value="morning">صباحي</option><option value="evening">مسائي</option></select></label>'+field('section','الشعبة','text',false)+field('title','عنوان البحث','text',false,'full'),'إضافة طالب'));
+ const dist=section('المشرفون والتوزيع التلقائي','<form id="gradDist"><label>العام الدراسي<input name="year" value="'+esc(g.year)+'"></label><label>الحد الأعلى لكل مشرف (اختياري)<input name="max" type="number" min="1" value="'+(g.max||'')+'"></label>'
+  +'<fieldset class="full"><legend>المشرفون من ملاك القسم ('+staff.length+')</legend><div class="chips">'+staff.map(supChip).join('')+'</div></fieldset>'
+  +(ext.length?'<details class="full"><summary>تدريسيون خارجيون ('+ext.length+')</summary><div class="chips">'+ext.map(supChip).join('')+'</div></details>':'')
+  +'<label class="chip full"><input type="checkbox" name="all" value="1"> إعادة توزيع كل الطلبة من جديد (يلغي التوزيع الحالي)</label>'
+  +'<div class="form-actions"><button>⚖️ توزيع الطلبة بالتساوي</button></div></form><p class="muted">يُوزَّع الطلبة بلا مشرف على المشرفين المختارين بالتساوي، مع تفضيل المشرف الأقرب تخصصاً لعنوان البحث عند التساوي. التوزيع اليدوي في الجدول يبقى كما هو.</p>'
+  +(Object.keys(loads).length?'<div class="chips">'+Object.entries(loads).sort((a,b)=>b[1]-a[1]).map(([id,n])=>'<span class="chip">'+esc(name(id))+': <b>'+n+'</b></span>').join('')+'</div>':''));
+ const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(l)+'</option>';
+ const supOpts=cur=>opt('','— بلا مشرف —',cur)+'<optgroup label="ملاك القسم">'+staff.map(t=>opt(t.id,t.name,cur)).join('')+'</optgroup>'+(ext.length?'<optgroup label="خارجيون">'+ext.map(t=>opt(t.id,t.name,cur)).join('')+'</optgroup>':'');
+ const filters='<div class="tools g-filters"><input id="gq" placeholder="بحث بالاسم أو العنوان" value="'+esc(gf.q)+'"><select id="gstudy">'+opt('','كل الدراسات',gf.study)+opt('morning','صباحي',gf.study)+opt('evening','مسائي',gf.study)+'</select><select id="gsup">'+opt('','كل المشرفين',gf.sup)+opt('-','بلا مشرف',gf.sup)+g.supervisors.concat(Object.keys(loads)).filter((x,i,a)=>a.indexOf(x)===i).map(id=>opt(id,name(id),gf.sup)).join('')+'</select><select id="gstatus">'+opt('','كل الحالات',gf.status)+GRAD_STATUS.map(x=>opt(x,x,gf.status)).join('')+'</select>'
+  +'<button class="secondary" data-r-print>🖨️ طباعة</button><button class="secondary" data-action="gradExcel">📊 Excel</button>'+(g.students.length?'<button class="btn-sm ghost-danger" data-action="gradClear">حذف كل الطلبة</button>':'')+'</div>';
+ const rows=list.map((s,i)=>[i+1,esc(s.name),studyLabel(s.study)+(s.section?' / '+esc(s.section):''),'<input class="g-in" data-g-title="'+esc(s.id)+'" value="'+esc(s.title||'')+'" placeholder="عنوان البحث">','<select data-g-sup="'+esc(s.id)+'">'+supOpts(s.supervisor||'')+'</select>','<select data-g-status="'+esc(s.id)+'">'+GRAD_STATUS.map(x=>opt(x,x,s.status||GRAD_STATUS[0])).join('')+'</select>','<span class="row-actions"><button class="btn-sm secondary" data-g-edit="'+esc(s.id)+'">تعديل</button><button class="btn-sm ghost-danger" data-g-del="'+esc(s.id)+'">حذف</button></span>']);
+ return cards+dist+students+section('قائمة بحوث التخرج · '+esc(g.year)+' ('+list.length+(list.length!==g.students.length?' من '+g.students.length:'')+')',filters+table(['ت','الطالب','الدراسة / الشعبة','عنوان البحث','المشرف','الحالة',''],rows))
+  +'<div class="r-report">'+gradReport(list)+'</div>';
+}
+function gradReport(list){
+ const by={};list.forEach(s=>(by[s.supervisor||'']??=[]).push(s));
+ const t=(head,rows)=>'<table class="rr-t"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+ return '<div class="rr-head"><img src="assets/college-logo-192.png" alt=""><div><b>جامعة الموصل · كلية الإدارة والاقتصاد · قسم إدارة الأعمال</b><h2>توزيع بحوث التخرج على المشرفين · '+esc(grad().year)+'</h2><span>عدد الطلبة: '+list.length+' · تاريخ الإعداد: '+today()+'</span></div></div>'
+  +Object.entries(by).sort((a,b)=>name(a[0]).localeCompare(name(b[0]),'ar')).map(([id,ss])=>'<h3>'+(id?esc(name(id)):'بلا مشرف')+' ('+ss.length+')</h3>'+t(['ت','الطالب','الدراسة / الشعبة','عنوان البحث','الحالة'],ss.map((s,i)=>[i+1,esc(s.name),studyLabel(s.study)+(s.section?' / '+esc(s.section):''),esc(s.title||'—'),esc(s.status||GRAD_STATUS[0])]))).join('')
+  +'<div class="rr-sign"><span>رئيس القسم: ..............................</span><span>التوقيع: ....................</span><span>التاريخ: '+today()+'</span></div>';
+}
+async function gradImport(file){
+ try{
+  const X=await getSheetJs(),book=X.read(await file.arrayBuffer(),{type:'array'}),rows=X.utils.sheet_to_json(book.Sheets[book.SheetNames[0]],{header:1,defval:'',raw:false});
+  const hi=rows.findIndex(r=>r.some(c=>/اسم|الطالب/.test(String(c))));if(hi<0)throw Error('لم أجد عمود «اسم الطالب» في الملف');
+  const h=rows[hi].map(c=>String(c).trim()),col=re=>h.findIndex(c=>re.test(c)),cn=col(/اسم/)>=0?col(/اسم/):col(/الطالب/);
+  const cs=col(/دراسة/),cc=col(/شعبة/),ct=col(/عنوان|البحث|المشروع/),cv=col(/مشرف/);
+  const g=gradEdit(),have=new Set(g.students.map(s=>s.name));let n=0,skip=0;
+  for(const r of rows.slice(hi+1)){
+   const nm=String(r[cn]??'').trim().replace(/\s+/g,' ');if(!nm)continue;if(have.has(nm)){skip++;continue}have.add(nm);
+   g.students.push({id:uid(),name:nm,study:/مسائ/.test(String(r[cs]??''))?'evening':'morning',section:String(r[cc]??'').trim(),title:String(r[ct]??'').trim(),supervisor:cv>=0?matchTeacher(String(r[cv]??'')):'',status:GRAD_STATUS[0]});n++;
+  }
+  commit('أُضيف '+n+' طالب'+(skip?' وتُجوِز '+skip+' اسم مكرر':''));
+ }catch(e){toast('تعذر الاستيراد: '+e.message)}
+}
+async function gradTemplate(){try{const X=await getSheetJs(),b=X.utils.book_new(),sh=X.utils.aoa_to_sheet([['اسم الطالب','الدراسة','الشعبة','عنوان البحث','المشرف'],['مثال: أحمد محمد علي','صباحي','A','','']]);sh['!cols']=[{wch:32},{wch:12},{wch:8},{wch:48},{wch:28}];X.utils.book_append_sheet(b,sh,'طلبة التخرج');X.writeFile(b,'graduation-students-template.xlsx')}catch(e){toast(e.message)}}
+async function gradExcel(){
+ try{const X=await getSheetJs(),b=X.utils.book_new(),list=gradList().slice().sort((a,b)=>name(a.supervisor).localeCompare(name(b.supervisor),'ar'));
+  X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['ت','الطالب','الدراسة','الشعبة','عنوان البحث','المشرف','الحالة'],...list.map((s,i)=>[i+1,s.name,studyLabel(s.study),s.section||'',s.title||'',s.supervisor?name(s.supervisor):'',s.status||GRAD_STATUS[0]])]),'بحوث التخرج');
+  const loads=gradLoads(grad());X.utils.book_append_sheet(b,X.utils.aoa_to_sheet([['المشرف','عدد الطلبة'],...Object.entries(loads).map(([id,n])=>[name(id),n])]),'المشرفون');
+  X.writeFile(b,'بحوث-التخرج-'+today()+'.xlsx')}catch(e){toast(e.message)}
+}
+function bindGrad(){
+ if(!isAdmin())return;
+ const g=gradEdit,find=id=>gradEdit().students.find(s=>s.id===id);
+ bind('gradStudent',d=>{const nm=d.name.trim().replace(/\s+/g,' ');if(g().students.some(s=>s.name===nm))return toast('الطالب مضاف مسبقاً');g().students.push({id:uid(),name:nm,study:d.study,section:d.section.trim(),title:d.title.trim(),supervisor:'',status:GRAD_STATUS[0]});commit('تمت إضافة الطالب')});
+ bind('gradDist',(d,f)=>{const sup=new FormData(f).getAll('sup');if(!sup.length)return toast('اختر المشرفين أولاً');if(d.all&&!confirm('إعادة توزيع كل الطلبة وإلغاء التوزيع الحالي؟'))return;g().year=d.year.trim()||g().year;const left=distributeGrad(sup,Number(d.max)||0,!!d.all);commit(left?'وُزّع الطلبة، وبقي '+left+' طالب بلا مشرف لأن المشرفين بلغوا الحد الأعلى':'تم توزيع الطلبة على '+sup.length+' مشرف بالتساوي')});
+ document.querySelectorAll('[data-g-sup]').forEach(x=>x.onchange=()=>{const s=find(x.dataset.gSup);if(s){s.supervisor=x.value;commit('تم تغيير المشرف')}});
+ document.querySelectorAll('[data-g-status]').forEach(x=>x.onchange=()=>{const s=find(x.dataset.gStatus);if(s){s.status=x.value;commit('تم تحديث الحالة')}});
+ document.querySelectorAll('[data-g-title]').forEach(x=>x.onchange=()=>{const s=find(x.dataset.gTitle);if(s){s.title=x.value.trim();commit('تم حفظ عنوان البحث')}});
+ document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>{const s=find(b.dataset.gEdit);if(!s)return;const nm=prompt('اسم الطالب',s.name);if(nm===null)return;const sec=prompt('الشعبة',s.section||'');s.name=nm.trim()||s.name;if(sec!==null)s.section=sec.trim();commit('تم حفظ التعديل')});
+ document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>{const s=find(b.dataset.gDel);if(s&&confirm('حذف الطالب «'+s.name+'»؟')){g().students=g().students.filter(x=>x.id!==s.id);commit('تم حذف الطالب')}});
+ const q=$('#gq');if(q)q.onchange=()=>{gf.q=q.value;render()};
+ [['gstudy','study'],['gsup','sup'],['gstatus','status']].forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.onchange=()=>{gf[k]=el.value;render()}});
 }
 function fillEditing(){
  if(!editing)return;const f=document.getElementById(editing.form),rec=db[COLS[editing.form]]?.find(x=>x.id===editing.id);
@@ -1539,19 +1722,22 @@ function enhanceTables(){
   const i=document.createElement('input');i.type='search';i.className='table-search';i.placeholder='بحث في الجدول…';i.setAttribute('aria-label','بحث في الجدول');
   i.oninput=()=>{const q=i.value.trim();for(const r of tb.rows)r.hidden=!!q&&!r.textContent.includes(q)};w.before(i)});
 }
-function go(p){if(!isAdmin()&&!TEACHER_PAGES.includes(p))p=0;if(!isAdmin()&&p===3&&person&&!scheduleFilter)scheduleFilter='t:'+person;page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');syncMenuBtn();render();scrollTo(0,0)}
+function go(p){if(!canPage(p))p=0;if(!isAdmin()&&p===3&&person&&!scheduleFilter)scheduleFilter='t:'+person;page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');syncMenuBtn();render();scrollTo(0,0)}
 function render(){
 if(cloud.on&&!cloud.ready)return;
 applyView();
 cloud.dirty=false;$('#syncBar').style.display='none';
-if(!isAdmin()&&!TEACHER_PAGES.includes(page))page=0;
+if(!canPage(page))page=0;
 updateWho();
-$('#nav').innerHTML=navGroups.map(([g,ix])=>[g,ix.filter(i=>isAdmin()||TEACHER_PAGES.includes(i))]).filter(([,ix])=>ix.length).map(([g,ix])=>'<div class="nav-group"><span>'+g+'</span>'+ix.map(i=>'<button data-page="'+i+'"'+(page===i?' class="active" aria-current="page"':'')+'>'+pages[i]+'</button>').join('')+'</div>').join('');
+$('#nav').innerHTML=navGroups.map(([g,ix])=>[g,ix.filter(i=>canPage(i))]).filter(([,ix])=>ix.length).map(([g,ix])=>'<div class="nav-group"><span>'+g+'</span>'+ix.map(i=>'<button data-page="'+i+'"'+(page===i?' class="active" aria-current="page"':'')+'>'+pages[i]+'</button>').join('')+'</div>').join('');
 $('#title').textContent=pages[page];document.title=pages[page]+' · رئاسة القسم الذكية';
-const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,()=>adminsSection()+adminView(),workloadView,researchView,lettersView];
+const views=[dashboard,teachersView,announcementsView,coursesView,invigilationView,tasksView,committeesView,pollsView,backupView,()=>adminsSection()+rolesSection()+adminView(),workloadView,researchView,lettersView,gradView];
 $('#view').innerHTML=(viewAs?'<div class="alert ok preview-bar"><span>👁️ '+(viewAs===ownTeacher()?'تشاهد النظام بصفتك تدريسياً':'تشاهد النظام كما يراه: <b>'+esc(name(viewAs))+'</b> · معاينة فقط')+'</span><button data-action="exitView">العودة إلى رئيس القسم</button></div>':'')+views[page]();
 if(page===9)bindAdmin();
 if(page===8)bindProtection();
+if(page===13)bindGrad();
+syncPwaButtons();
+document.querySelectorAll('[data-share]').forEach(b=>b.onclick=()=>{const [k,id]=b.dataset.share.split('|');shareAnn(k,id)});
 if(page===10)bindWorkload();
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>go(Number(b.dataset.page)));
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>action(b.dataset.action));
@@ -1597,6 +1783,8 @@ document.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>{const t=db.ta
 document.querySelectorAll('[data-read]').forEach(b=>b.onclick=()=>{if(previewOther())return toast('معاينة فقط: لا يمكن تأكيد القراءة نيابة عن التدريسي');const a=db.announcements.find(a=>a.id===b.dataset.read);if(!a.read.includes(person))a.read.push(person);commit(db.announcements.every(x=>x.read.includes(person))?'🎉 أحسنت! قرأت كل التبليغات':'تم تأكيد القراءة ✓')});
 if($('#scheduleFilter')){$('#scheduleFilter').value=scheduleFilter;$('#scheduleFilter').onchange=e=>{scheduleFilter=e.target.value;render()}}
 bind('restore',async(d,f)=>{let x;try{x=JSON.parse(await f.elements.file.files[0].text())}catch{return toast('الملف غير صالح أو لا يطابق نسخة التطبيق')}const data=x?.app==='smart-department'?x.data:x;restoreData(data||{},x?.files||null,'النسخة '+(x?.exportedAt?new Date(x.exportedAt).toLocaleDateString('ar-IQ'):f.elements.file.files[0].name))});
+bind('roleForm',d=>{if(cloud.admins.includes(d.email))return toast('هذا الحساب مشرف بصلاحيات كاملة مسبقاً');setRoles({...(cloud.roles||{}),[d.email]:d.role})});
+document.querySelectorAll('[data-role-del]').forEach(b=>b.onclick=()=>{const r={...(cloud.roles||{})};delete r[b.dataset.roleDel];setRoles(r)});
 bind('adminForm',d=>{const e=d.email.trim().toLowerCase();if(!e.endsWith('@'+DOMAIN))return toast('يجب أن يكون البريد من نطاق '+DOMAIN);if(cloud.admins.includes(e))return toast('الحساب مشرف مسبقاً');setAdmins([...cloud.admins,e])});
 document.querySelectorAll('[data-admin-del]').forEach(b=>b.onclick=()=>{const e=b.dataset.adminDel;if(e===cloud.user.email.toLowerCase()&&!confirm('ستفقد صلاحية الإدارة بإزالة حسابك. متابعة؟'))return;setAdmins(cloud.admins.filter(x=>x!==e))});
 document.querySelectorAll('[data-study]').forEach(b=>b.onclick=()=>{schedStudy=b.dataset.study;render()});
@@ -1686,7 +1874,9 @@ function generateSchedule(){
  save();render();
 }
 function action(a){
-if(a==='exitView')return setViewAs('');if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
+if(a==='exitView')return setViewAs('');if(a==='notif')return enableNotif();if(a==='install')return installApp();if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
+if(a==='gradImport'){const i=$('#gradFile');i.value='';i.onchange=()=>gradImport(i.files[0]);i.click()}if(a==='gradTemplate')gradTemplate();if(a==='gradExcel')gradExcel();
+if(a==='gradClear'&&confirm('حذف كل طلبة بحوث التخرج من القائمة؟ (يمكن استعادتهم من نقاط الاسترجاع)')){gradEdit().students=[];commit('حُذفت القائمة')}
 if(a==='backup'||a==='backupFull')backupFull();if(a==='backupExcel')backupExcel();
 if(a==='snapNow'){prot.busy='جارٍ إنشاء نقطة استرجاع…';render();makeSnap('يدوية').then(()=>{prot.busy='';render();toast('تم حفظ نقطة استرجاع')}).catch(e=>{prot.busy='';if(e.code==='permission-denied')prot.denied=true;render();toast('تعذر الحفظ: '+e.message)})}
 if(a==='logRefresh'){prot.log=null;loadProtection()}if(a==='logMore'){prot.logLimit+=100;loadProtection()}
@@ -1953,7 +2143,10 @@ function cloudView(){
  m.answers=new Map(db.polls.flatMap(p=>(p.answers||[]).map(x=>[p.id+'_'+x.teacher,{id:p.id+'_'+x.teacher,poll:p.id,teacher:x.teacher,answer:x.answer}])));
  // البحوث تُحفظ في مجموعة answers التي تسمح القواعد المنشورة لكل تدريسي بالكتابة فيها لسجلاته فقط
  (db.research||[]).filter(r=>r.teacher&&(cloud.admin?!r.deleted:true)).forEach(r=>{const {id,teacher,createdAt,deleted,...data}=r,key='R'+id+'_'+teacher;m.answers.set(key,{id:key,poll:'R'+id,teacher,kind:'research',createdAt:createdAt??null,deleted:!!deleted,data})});
- m.meta=new Map([['state',{id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},ttTerm:db.ttTerm||1,letters:db.letters||[],letterCfg:db.letterCfg||null,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null}]]);
+ let st={id:'state',schedule:db.schedule,ttSections:db.ttSections||{},examPlan:db.examPlan||null,ttPlans:db.ttPlans||{},ttTerm:db.ttTerm||1,letters:db.letters||[],letterCfg:db.letterCfg||null,scheduleStale:!!db.scheduleStale,workloadMeta:db.workloadMeta||null,grad:db.grad||null};
+ // صاحب الصلاحية المحدودة لا يضيف مفاتيح خارج صلاحيته (القواعد ترفض أي تغيير فيها)
+ if(!cloud.admin){const R=myRole(),o={...(cloud.raw.meta?.get('state')||{}),id:'state'};for(const k of R?.meta||[])o[k]=st[k];st=o}
+ m.meta=new Map([['state',st]]);
  return m;
 }
 let pushQueued=false;
@@ -1961,10 +2154,11 @@ function queuePush(){if(pushQueued)return;pushQueued=true;queueMicrotask(pushNow
 async function pushNow(){
  pushQueued=false;
  const {doc,writeBatch}=cloud.sdk,view=cloudView(),ops=[];
- for(const c of cloud.admin?Object.keys(view):['reads','answers']){
-  const sh=cloud.shadow[c]||new Map();
-  for(const [id,data] of view[c]){const s=stable(data);if(sh.get(id)!==s&&(cloud.admin||data.teacher===cloud.teacherId))ops.push(['set',c,id,s,sh.get(id)])}
-  if(cloud.admin)for(const id of sh.keys())if(!view[c].has(id))ops.push(['del',c,id,null,sh.get(id)]);
+ const R=myRole(),cols=cloud.admin?Object.keys(view):['reads','answers',...(R?.cols||[]),...(R?.meta.length?['meta']:[])];
+ for(const c of cols){
+  const sh=cloud.shadow[c]||new Map(),full=cloud.admin||!!R?.cols.includes(c)||c==='meta';
+  for(const [id,data] of view[c]){const s=stable(data);if(sh.get(id)!==s&&(full||data.teacher===cloud.teacherId))ops.push(['set',c,id,s,sh.get(id)])}
+  if(cloud.admin||R?.cols.includes(c))for(const id of sh.keys())if(!view[c].has(id))ops.push(['del',c,id,null,sh.get(id)]);
  }
  if(!ops.length)return;
  // حماية من الحذف الجماعي غير المقصود (الاسترجاع ونقل البيانات مستثنيان لأنهما مؤكَّدان مسبقاً)
@@ -1988,17 +2182,18 @@ function applyRemote(force){
  next.announcements.forEach(a=>a.read=reads.filter(r=>r.ann===a.id).map(r=>r.teacher));
  next.polls.forEach(p=>p.answers=answers.filter(r=>r.poll===p.id).map(r=>({teacher:r.teacher,answer:r.answer})));
  next.research=answers.filter(r=>r.kind==='research'&&!r.deleted).map(r=>({...(r.data||{}),id:String(r.poll).slice(1),teacher:r.teacher,createdAt:r.createdAt}));
- next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.ttTerm=meta.ttTerm||1;next.letters=meta.letters||[];next.letterCfg=meta.letterCfg||null;next.scheduleStale=!!meta.scheduleStale;
+ next.schedule=meta.schedule||[];next.ttSections=meta.ttSections||{};next.examPlan=meta.examPlan||null;next.ttPlans=meta.ttPlans||{};next.ttTerm=meta.ttTerm||1;next.letters=meta.letters||[];next.letterCfg=meta.letterCfg||null;next.grad=meta.grad||null;next.scheduleStale=!!meta.scheduleStale;
  next.workloadMeta=meta.workloadMeta||{department:'إدارة الأعمال',year:'2025-2026',term:'الكورس الاول',study:'الدراسة الصباحية'};
  next.workloads=g('workloads');
  db=next;updateIdentity();
  if(!cloud.ready)return;
+ notifyNew();
  if(cloud.dirty&&!force){$('#syncBar').style.display='flex';return}
  render();
 }
 function updateIdentity(){
  const email=(cloud.user?.email||'').toLowerCase();
- cloud.admin=!!cloud.admins?.includes(email);
+ cloud.admin=!!cloud.admins?.includes(email);cloud.role=cloud.admin?'':cloud.roles?.[email]||'';
  cloud.teacherId=db.teachers.find(t=>(t.email||'').trim().toLowerCase()===email)?.id||'';
  applyView();
  if(cloud.admin&&!cloud.wlUnsub)cloud.wlUnsub=listen('workloads',workloadsError);
@@ -2020,7 +2215,9 @@ function listenError(e){
 }
 function subscribe(){
  const {doc,onSnapshot}=cloud.sdk;
- cloud.expect=CORE.length+4;
+ cloud.expect=CORE.length+5;
+ // الصلاحيات المحدودة: إن رفضت القواعد القديمة القراءة يعمل التطبيق دونها
+ cloud.unsubs.push(onSnapshot(doc(cloud.fs,'config','roles'),s=>{cloud.roles=s.exists()?s.data().roles||{}:{};loaded('roles')},()=>{cloud.roles={};loaded('roles')}));
  for(const c of [...CORE,'reads','answers'])cloud.unsubs.push(listen(c));
  cloud.unsubs.push(onSnapshot(doc(cloud.fs,'meta','state'),s=>{const d=s.exists()?s.data():null;cloud.raw.meta=new Map(d?[['state',d]]:[]);cloud.shadow.meta=new Map(d?[['state',stable(d)]]:[]);loaded('meta')},listenError));
  cloud.unsubs.push(onSnapshot(doc(cloud.fs,'config','admins'),{includeMetadataChanges:true},s=>{if(s.metadata.hasPendingWrites)return;cloud.admins=s.exists()?(s.data().emails||[]).map(e=>String(e).toLowerCase()):null;loaded('admins')},listenError));
@@ -2037,7 +2234,7 @@ function loaded(c){
 }
 function resetCloud(){
  cloud.unsubs.forEach(u=>u());if(cloud.wlUnsub)cloud.wlUnsub();
- Object.assign(cloud,{unsubs:[],wlUnsub:null,raw:{},shadow:{},loaded:new Set(),ready:false,dirty:false,admins:null,admin:false,teacherId:'',researchDenied:false});
+ Object.assign(cloud,{unsubs:[],wlUnsub:null,raw:{},shadow:{},loaded:new Set(),ready:false,dirty:false,admins:null,admin:false,teacherId:'',researchDenied:false,roles:{},role:''});
  $('#syncBar').style.display='none';
  db=structuredClone(initial);
 }
@@ -2082,7 +2279,7 @@ function showApp(){
 function updateWho(){
  const w=$('#who'),signed=cloud.on&&cloud.user;
  if(cloud.on&&!signed){w.innerHTML='';return}
- w.innerHTML=(cloud.on&&cloud.ready||!cloud.on?viewSwitch():'')+(signed?'<span>'+esc(cloud.user.email)+(cloud.ready&&!cloud.admin?' · تدريسي':'')+'</span><button class="btn-sm secondary" id="signout">خروج</button>':'');
+ w.innerHTML=(cloud.on&&cloud.ready||!cloud.on?viewSwitch():'')+(signed?'<span>'+esc(cloud.user.email)+(cloud.ready&&!cloud.admin?' · '+(myRole()?.label||'تدريسي'):'')+'</span><button class="btn-sm secondary" id="signout">خروج</button>':'');
  if(signed)$('#signout').onclick=()=>cloud.sdk.signOut(cloud.auth);
  const v=$('#viewAs');if(v){v.value=viewAs;v.onchange=()=>setViewAs(v.value)}
 }
@@ -2111,12 +2308,26 @@ function adminsSection(){
   +table(['البريد',''],cloud.admins.map(e=>['<span dir="ltr">'+esc(e)+'</span>',cloud.admins.length>1?'<button class="btn-sm ghost-danger" data-admin-del="'+esc(e)+'">إزالة</button>':'']))
   +form('adminForm',field('email','إضافة مشرف (بريد جامعي)','email'),'إضافة مشرف'));
 }
+function rolesSection(){
+ if(!cloud.on||!cloud.admin)return '';
+ const roles=cloud.roles||{},withMail=db.teachers.filter(t=>(t.email||'').trim().toLowerCase().endsWith('@'+DOMAIN));
+ return section('الصلاحيات المحدودة','<p class="muted">امنح تدريسياً تعديل صفحات محددة فقط دون بقية صلاحيات رئيس القسم. يرى صاحب الصلاحية بقية النظام كأي تدريسي، وتظهر تعديلاته باسمه في سجل التغييرات.</p>'
+  +'<div class="role-help">'+Object.values(ROLES).map(r=>'<div><b>'+r.label+'</b><small>'+r.pages.map(p=>pages[p]).join('، ')+'</small></div>').join('')+'</div>'
+  +(Object.keys(roles).length?table(['التدريسي','البريد','الصلاحية',''],Object.entries(roles).map(([e,r])=>[esc(db.teachers.find(t=>(t.email||'').trim().toLowerCase()===e)?.name||'—'),'<span dir="ltr">'+esc(e)+'</span>',pill('info',ROLES[r]?.label||r),'<button class="btn-sm ghost-danger" data-role-del="'+esc(e)+'">إلغاء</button>'])):'')
+  +form('roleForm','<label>التدريسي<select name="email" required><option value="">اختر التدريسي</option>'+withMail.map(t=>'<option value="'+esc(t.email.trim().toLowerCase())+'">'+esc(t.name)+'</option>').join('')+'</select></label><label>الصلاحية<select name="role" required>'+Object.entries(ROLES).map(([k,r])=>'<option value="'+k+'">'+r.label+'</option>').join('')+'</select></label>','منح الصلاحية')
+  +'<p class="muted">تظهر في القائمة أسماء من لديهم بريد جامعي (@'+DOMAIN+') في دليل التدريسيين.</p>');
+}
+async function setRoles(roles){
+ try{await cloud.sdk.setDoc(cloud.sdk.doc(cloud.fs,'config','roles'),{roles});toast('تم تحديث الصلاحيات')}catch(e){toast('تعذر التحديث: '+(e.code==='permission-denied'?'قواعد الحماية لا تسمح بعد بالصلاحيات المحدودة':e.message))}
+}
 async function setAdmins(emails){
  try{await cloud.sdk.setDoc(cloud.sdk.doc(cloud.fs,'config','admins'),{emails});toast('تم تحديث المشرفين')}catch(e){toast('تعذر التحديث: '+e.message)}
 }
 
 function applyTheme(t){if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme}
 try{applyTheme(localStorage.getItem('smart-department-theme')||'')}catch{}
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+$('#installBtn').onclick=installApp;$('#notifBtn').onclick=enableNotif;
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme,dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches,t=dark?'light':'dark';applyTheme(t);try{localStorage.setItem('smart-department-theme',t)}catch{}};
 // على الهاتف تُفتح القائمة فوق الصفحة، وعلى الحاسوب تُطوى ويتذكر المتصفح الاختيار
 const narrow=()=>matchMedia('(max-width:900px)').matches;
