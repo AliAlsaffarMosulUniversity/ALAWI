@@ -397,13 +397,14 @@ body.nav-hidden .top-logo{display:block}
 .l-cc ul{margin:1mm 0 0;padding-inline-start:6mm}
 .l-foot{position:absolute;bottom:9mm;left:18mm;right:18mm;border-top:1px solid #8a3fb8;padding-top:2mm;text-align:center;font-size:11px;color:#555}
 @media(max-width:700px){.l-form{grid-template-columns:1fr}}
+@page{size:A4;margin:14mm 12mm}
+@page letter{size:A4;margin:0}
 @media print{
- @page{size:A4;margin:0}
  body.print-letter main>*:not(#view),body.print-letter #view>*:not(.letters),body.print-letter .letters>section:not(:has(.l-preview)),body.print-letter .letters>section>h2,body.print-letter .top-logo,body.print-letter .print-head{display:none!important}
  body.print-letter main{margin:0!important;padding:0!important;max-width:none}
  body.print-letter .letters>section{padding:0;border:0;box-shadow:none;background:none;margin:0}
  body.print-letter .l-preview{padding:0;background:none;overflow:visible;display:block}
- body.print-letter .letter-page{box-shadow:none;margin:0;width:210mm;min-height:297mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ body.print-letter .letter-page{page:letter;box-shadow:none;margin:0;width:210mm;min-height:297mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .view-as{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .view-as select{padding:6px 10px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);max-width:210px}
