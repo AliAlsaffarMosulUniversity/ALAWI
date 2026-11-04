@@ -1546,7 +1546,7 @@ function filteredResearch(){
  const own=!isAdmin(),t=hk(rf.text);
  return db.research.filter(r=>!r.deleted&&(!own||r.teacher===person)&&(!rf.idx.length||rf.idx.includes(r.indexing))&&(!rf.status||r.status===rf.status)&&(!rf.type||r.type===rf.type)&&(!rf.teacher||r.teacher===rf.teacher)&&(!rf.q||r.quartile===rf.q)
   &&(!rf.year||String(r.date||'').startsWith(rf.year))&&(!rf.from||String(r.date||'')>=rf.from)&&(!rf.to||String(r.date||'').slice(0,7)<=rf.to)
-  &&(!t||hk([r.title,r.journal,name(r.teacher),r.coauthors].join(' ')).includes(t))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  &&(!t||ssHas([r.title,r.journal,name(r.teacher),r.coauthors].join(' '),rf.text))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
 }
 function filterLabel(){
  const parts=[];if(rf.idx.length)parts.push(rf.idx.map(k=>rIndex(k)[1]).join(' أو '));if(rf.status)parts.push(rf.status);if(rf.type)parts.push(rf.type);if(rf.q)parts.push(rf.q);if(rf.teacher)parts.push(name(rf.teacher));
@@ -2022,7 +2022,7 @@ function distributeGrad(sup,max,all){
 }
 function gradList(){
  const q=ssNorm(gf.q);
- return grad().projects.filter(p=>(!gf.study||p.study===gf.study)&&(!gf.sup||(gf.sup==='-'?!p.supervisor:p.supervisor===gf.sup))&&(!gf.status||(p.status||GRAD_STATUS[0])===gf.status)&&(!q||ssNorm((p.title||'')+' '+gradStudents(p).join(' ')).includes(q)));
+ return grad().projects.filter(p=>(!gf.study||p.study===gf.study)&&(!gf.sup||(gf.sup==='-'?!p.supervisor:p.supervisor===gf.sup))&&(!gf.status||(p.status||GRAD_STATUS[0])===gf.status)&&(!q||ssHas((p.title||'')+' '+gradStudents(p).join(' '),q)));
 }
 function gradForm(g){
  const p=gradEditing?g.projects.find(x=>x.id===gradEditing):null,v=k=>esc(p?.[k]||''),st=i=>esc(p?gradStudents(p)[i]||'':'');
@@ -2126,7 +2126,10 @@ function fillEditing(){
 // ===== بحث داخل القوائم المنسدلة الطويلة =====
 // كل قائمة فيها 7 خيارات أو أكثر تصبح خانة بحث: اكتب أي أحرف من الاسم فتظهر الأسماء المطابقة.
 // القائمة الأصلية تبقى في النموذج (مخفية) فتُحفظ القيمة وتعمل كل الأحداث كما هي.
-const ssNorm=v=>String(v??'').replace(/[ً-ْـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase().replace(/\s+/g,' ').trim();
+const ssNorm=v=>String(v??'').replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[\u0623\u0625\u0622\u0671]/g,'\u0627').replace(/\u0629/g,'\u0647').replace(/[\u0649\u0626\u06CC]/g,'\u064A').replace(/\u0624/g,'\u0648').replace(/\u06A9/g,'\u0643').replace(/[\u0660-\u0669]/g,d=>d.charCodeAt(0)-1632).toLowerCase().replace(/[.,\u060C:\u061B_\-]/g,' ').replace(/\s+/g,' ').trim();
+// بحث مرن: يتغاضى عن الهمزات والحركات والتاء المربوطة والياء والألف المقصورة وعن الفراغات والنقاط، وكل كلمة من البحث يجب أن تظهر في النص
+const ssKey=v=>ssNorm(v).replace(/ /g,'');
+const ssHas=(text,q)=>{const t=ssKey(text);return ssNorm(q).split(' ').filter(Boolean).every(w=>t.includes(w))};
 let ssOpen=null,ssPlace=null;
 addEventListener('scroll',e=>{if(ssPlace&&!e.target.closest?.('.ss-list'))ssPlace()},true);addEventListener('mousedown',e=>{if(ssOpen&&!e.target.closest?.('.ss-list,.ss-btn'))ssOpen()},true);addEventListener('resize',()=>ssPlace?.());
 function enhanceSelects(root=document){
@@ -2147,7 +2150,7 @@ function enhanceSelects(root=document){
   const hl=()=>wrap?.querySelectorAll('.ss-o').forEach(d=>{const on=Number(d.dataset.i)===act;d.classList.toggle('act',on);if(on)d.scrollIntoView({block:'nearest'})});
   const draw=()=>{
    const terms=ssNorm(q.value).split(' ').filter(Boolean),out=[];let grp=null;
-   [...sel.options].forEach(o=>{const t=ssNorm(o.text);if(terms.length&&(!o.value||!terms.every(w=>t.includes(w))))return;
+   [...sel.options].forEach(o=>{const t=ssKey(o.text);if(terms.length&&(!o.value||!terms.every(w=>t.includes(w))))return;
     out.push({o,g:o.parentElement.tagName==='OPTGROUP'?o.parentElement.label:'',score:terms.length?(t.split(' ').some(w=>w.startsWith(terms[0]))?0:1):0})});
    if(terms.length)out.sort((x,y)=>x.score-y.score);
    items=out.map(x=>x.o);act=terms.length?(items.length?0:-1):Math.max(0,items.findIndex(o=>o.value===sel.value));
@@ -2184,7 +2187,7 @@ function enhanceChecks(root=document){
 function enhanceTables(){
  document.querySelectorAll('#view .scroll').forEach(w=>{const tb=w.querySelector('table:not(.week):not(.tt-table):not(.inv-table):not(.tta-table) tbody');if(!tb||tb.rows.length<7)return;
   const i=document.createElement('input');i.type='search';i.className='table-search';i.placeholder='بحث في الجدول…';i.setAttribute('aria-label','بحث في الجدول');
-  i.oninput=()=>{const q=i.value.trim();for(const r of tb.rows)r.hidden=!!q&&!r.textContent.includes(q)};w.before(i)});
+  i.oninput=()=>{const q=i.value.trim();for(const r of tb.rows)r.hidden=!!q&&!ssHas(r.textContent,q)};w.before(i)});
 }
 function go(p){if(!canPage(p))p=0;if(!isAdmin()&&p===3&&person&&!scheduleFilter)scheduleFilter='t:'+person;page=p;editing=null;scheduleMsg=null;document.body.classList.remove('nav-open');syncMenuBtn();render();scrollTo(0,0)}
 function render(){
@@ -2366,7 +2369,7 @@ const PREVIEW=[['name','الاسم'],['email','البريد'],['college','الك
 let importType='';
 const typeLabel=t=>t==='external'?'خارجي':'ملاك القسم';
 const norm=v=>String(v??'').trim().replace(/\s+/g,' ');
-const hk=v=>norm(v).toLowerCase().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+const hk=v=>norm(v).replace(/[\u064B-\u065F\u0670\u0640]/g,'').toLowerCase().replace(/[\u0623\u0625\u0622\u0671]/g,'\u0627').replace(/\u0629/g,'\u0647').replace(/[\u0649\u0626]/g,'\u064A').replace(/\u0624/g,'\u0648');
 const isHomeDept=d=>hk(d).includes('اداره الاعمال');
 // النوع: من عمود النوع إن وُجد، وإلا من عمود القسم، وإلا من الاختيار في الصفحة
 function rowType(rawType,department){
