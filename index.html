@@ -891,7 +891,7 @@ function teacherDegOrder(t){const d=hk(t.degree||'');return /دكتوراه|دك
 function sortTeachers(list){return [...list].sort((x,y)=>teacherRankOrder(x)-teacherRankOrder(y)||teacherDegOrder(x)-teacherDegOrder(y)||nameTokens(x.name).join(' ').localeCompare(nameTokens(y.name).join(' '),'ar'))}
 function teacherTable(list,ext){
  const dups=dupIds();
- return table(['ت','الاسم','اللقب العلمي','الشهادة',ext?'الجهة':'أيام التواجد','التواصل',''],sortTeachers(list).map((t,i)=>[String(i+1),esc(t.name)+(dups.has(t.id)?' <span class="pill warn" title="مشتبه بتكراره، راجع «كشف التدريسيين المتشابهين» في أعلى الصفحة">⚠ مشتبه</span>':''),esc(t.rank||'—'),esc(t.degree||'—'),ext?esc(teacherOrg(t)||'—'):teacherDays(t).length?esc(teacherDays(t).join('، ')):pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherActions(t)]));
+ return table(['ت','الاسم','اللقب العلمي','الشهادة',ext?'الجهة':'رقم الهاتف',ext?'التواصل':'البريد',''],sortTeachers(list).map((t,i)=>[String(i+1),esc(t.name)+(dups.has(t.id)?' <span class="pill warn" title="مشتبه بتكراره، راجع «كشف التدريسيين المتشابهين» في أعلى الصفحة">⚠ مشتبه</span>':''),esc(t.rank||'—'),esc(t.degree||'—'),ext?esc(teacherOrg(t)||'—'):t.phone?'<span dir="ltr">'+esc(t.phone)+'</span>':'—',[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',ext&&t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherActions(t)]));
 }
 
 function announcementsView(){
