@@ -852,16 +852,21 @@ function teachersView(){
 const teacherOrg=t=>[t.department,t.college].filter(Boolean).join(' – ')||t.affiliation||'';
 // ---------------------------------------------------------------- كشف التدريسيين المتشابهين (الاسم + اسم الأب)
 function nameSub(a,b){if(a[0]!==b[0])return false;let j=1;for(const tok of a.slice(1)){while(j<b.length&&b[j]!==tok)j++;if(j>=b.length)return false;j++}return true}
+const phoneKey=v=>{const d=String(v||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/\D/g,'');return d.length>=9?d.slice(-10):''};
+const mailKey=v=>String(v||'').trim().toLowerCase();
+function dupWhy(a,b){
+ const r=[];
+ if(a.w.length>1&&b.w.length>1&&(nameSub(a.w,b.w)||nameSub(b.w,a.w))&&(a.w[1]===b.w[1]||Math.min(a.w.length,b.w.length)===2))r.push('الاسم');
+ if(a.em&&a.em===b.em)r.push('البريد');
+ if(a.ph&&a.ph===b.ph)r.push('الهاتف');
+ return r;
+}
 function dupGroups(){
- const T=db.teachers.map(t=>({t,w:nameTokens(t.name),em:(t.email||'').trim().toLowerCase()}));
+ const T=db.teachers.map(t=>({t,w:nameTokens(t.name),em:mailKey(t.email),ph:phoneKey(t.phone)}));
  const par=T.map((_,i)=>i),find=i=>par[i]===i?i:(par[i]=find(par[i]));
- for(let i=0;i<T.length;i++)for(let j=i+1;j<T.length;j++){
-  const a=T[i],b=T[j],sameMail=a.em&&a.em===b.em;
-  const sameName=a.w.length>1&&b.w.length>1&&(nameSub(a.w,b.w)||nameSub(b.w,a.w))&&(a.w[1]===b.w[1]||Math.min(a.w.length,b.w.length)===2);
-  if(sameMail||sameName)par[find(i)]=find(j);
- }
- const g=new Map();T.forEach((x,i)=>{const r=find(i);if(!g.has(r))g.set(r,[]);g.get(r).push(x.t)});
- return [...g.values()].filter(a=>a.length>1);
+ for(let i=0;i<T.length;i++)for(let j=i+1;j<T.length;j++)if(dupWhy(T[i],T[j]).length)par[find(i)]=find(j);
+ const g=new Map();T.forEach((x,i)=>{const r=find(i);if(!g.has(r))g.set(r,[]);g.get(r).push(x)});
+ return [...g.values()].filter(a=>a.length>1).map(a=>{const why=new Set();for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++)dupWhy(a[i],a[j]).forEach(x=>why.add(x));const l=a.map(x=>x.t);l.why=[...why];return l});
 }
 function dupIds(){return new Set(dupGroups().flat().map(t=>t.id))}
 const dupScore=t=>['email','phone','college','department','degree','rank','specialty','days'].filter(k=>String(t[k]||'').trim()).length+teacherRefs(t.id).reduce((a,[,n])=>a+n,0)*2;
@@ -872,9 +877,9 @@ function dupSection(){
  const n=gs.reduce((a,g)=>a+g.length,0);
  const body=gs.map((g,i)=>{
   const best=g.reduce((a,b)=>dupScore(b)>dupScore(a)?b:a);
-  return '<div class="dup-group"><h4>مجموعة '+(i+1)+' <small class="muted">('+g.length+' أسماء متشابهة)</small></h4>'+table(['الاسم','النوع','اللقب','البريد والهاتف','مرتبط بـ',''],g.map(t=>[esc(t.name)+(t===best&&g.length>1?' <span class="pill ok">الأكمل بيانات</span>':''),isExternal(t)?'خارجي':'ملاك القسم',esc(t.rank||'—'),[t.email&&esc(t.email),t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherRefs(t.id).map(([l,n])=>n+' '+esc(l)).join('، ')||'—',actions('teacher',t.id)]))+'</div>';
+  return '<div class="dup-group"><h4>مجموعة '+(i+1)+' <small class="muted">('+g.length+' أسماء · التشابه في: '+g.why.join('، ')+')</small></h4>'+table(['الاسم','النوع','اللقب','البريد والهاتف','مرتبط بـ',''],g.map(t=>[esc(t.name)+(t===best&&g.length>1?' <span class="pill ok">الأكمل بيانات</span>':''),isExternal(t)?'خارجي':'ملاك القسم',esc(t.rank||'—'),[t.email&&esc(t.email),t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherRefs(t.id).map(([l,n])=>n+' '+esc(l)).join('، ')||'—',actions('teacher',t.id)]))+'</div>';
  }).join('');
- return section('🔎 كشف التدريسيين المتشابهين ('+n+' اسماً في '+gs.length+' مجموعة)','<p class="muted">قارنت الاسم الأول واسم الأب، وكذلك الاسم المختصر (الأول واللقب) بالاسم الكامل، والبريد. كل مجموعة أدناه فيها أسماء يُشتبه أنها لشخص واحد. احذف المكرر بزر «حذف»، وانتبه لعمود «مرتبط بـ»: من له ارتباطات (حصص، لجان…) لا يُحذف قبل نقلها. ليس كل تشابه تكراراً، فقد يتفق شخصان في الاسم واسم الأب.</p><p class="muted">العدد الكلي في الدليل: '+db.teachers.length+' تدريسياً.</p>'+body);
+ return section('🔎 كشف التدريسيين المتشابهين ('+n+' اسماً في '+gs.length+' مجموعة)','<p class="muted">قارنت الاسم الأول واسم الأب، وكذلك الاسم المختصر (الأول واللقب) بالاسم الكامل، وكذلك البريد الإلكتروني ورقم الهاتف. كل مجموعة أدناه فيها أسماء يُشتبه أنها لشخص واحد. احذف المكرر بزر «حذف»، وانتبه لعمود «مرتبط بـ»: من له ارتباطات (حصص، لجان…) لا يُحذف قبل نقلها. ليس كل تشابه تكراراً، فقد يتفق شخصان في الاسم واسم الأب.</p><p class="muted">العدد الكلي في الدليل: '+db.teachers.length+' تدريسياً.</p>'+body);
 }
 function teacherActions(t){
  if(!isAdmin())return '';
@@ -1227,7 +1232,7 @@ function bindRotating(){
 const nameKey=v=>nameTokens(v).join(' ');
 function rotFindMatches(r){
  const em=(r.email||'').toLowerCase(),k=nameKey(r.name);
- const same=db.teachers.filter(t=>(em&&(t.email||'').trim().toLowerCase()===em)||nameKey(t.name)===k);
+ const ph=phoneKey(r.phone),same=db.teachers.filter(t=>(em&&mailKey(t.email)===em)||(ph&&phoneKey(t.phone)===ph)||nameKey(t.name)===k);
  if(same.length===1)return {kind:'same',list:same};
  if(same.length>1)return {kind:'maybe',list:same};
  const t=nameTokens(r.name),sub=(a,b)=>{if(a[0]!==b[0])return false;let j=1;for(const tok of a.slice(1)){while(j<b.length&&b[j]!==tok)j++;if(j>=b.length)return false;j++}return true};
