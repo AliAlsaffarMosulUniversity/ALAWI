@@ -846,8 +846,8 @@ function readPill(a){const n=db.teachers.filter(t=>a.read.includes(t.id)).length
 function teachersView(){
  return section(formTitle('teacher','إضافة تدريسي','تعديل بيانات تدريسي'),form('teacher',field('name','اسم التدريسي')+'<label>نوع التدريسي<select name="type"><option value="">من ملاك القسم</option><option value="external">خارجي (من خارج القسم)</option></select></label>'+field('college','الكلية','text',false)+field('department','القسم','text',false)+field('degree','الشهادة','text',false)+'<label>العنوان الوظيفي أو اللقب العلمي<input name="rank" list="rankList"><datalist id="rankList">'+RANKS.map(r=>'<option value="'+r+'">').join('')+'</datalist></label>'+field('specialty','التخصص (يُستعمل لاقتراح المواد)','text',false)+field('email','البريد الإلكتروني','email',false)+field('phone','رقم الهاتف','tel',false)+'<fieldset class="full"><legend>أيام التواجد (مطلوبة لتوليد الجدول فقط)</legend>'+checks('days',DAYS.map(d=>[d,d]))+'</fieldset>'))
  +dupSection()
- +section('دليل التدريسيين','<div class="tools">'+(isAdmin()?'<button data-action="quickImport">📥 استيراد تدريسيي القسم</button><button data-action="quickImportExt">📥 استيراد تدريسيين خارجيين</button><button class="secondary" data-action="teacherTemplate">تنزيل نموذج Excel</button><input id="quickExcel" type="file" accept=".xlsx,.xls" hidden>':'')+'<button class="secondary" data-action="csvTeachers">تصدير CSV</button></div>'+(isAdmin()?'<p class="muted">الاستيراد يضيف كل صفوف الملف دفعة واحدة. من كان قسمه «إدارة الأعمال» يُضاف إلى ملاك القسم، وغيره يُضاف خارجياً. الأسماء الموجودة مسبقاً تُتجاوز.</p>':'')+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
- +section('التدريسيون الخارجيون ('+db.teachers.filter(isExternal).length+')',(isAdmin()?'<div class="tools"><button class="secondary" data-action="quickImportExt">📥 استيراد قائمة خارجيين من Excel</button></div>':'')+'<p class="muted">يظهرون أسفل تدريسيي القسم في كل قوائم الاختيار (المراقبات، رؤساء القاعات، الجدول الذكي، اللجان)، فيمكن تكليفهم وتوزيعهم كأي تدريسي.</p>'+teacherTable(db.teachers.filter(isExternal),true));
+ +section('دليل التدريسيين','<div class="tools">'+(isAdmin()?'<button data-action="quickImport">📥 استيراد تدريسيي القسم</button><button data-action="quickImportExt">📥 استيراد تدريسيين خارجيين</button><button class="secondary" data-action="teacherTemplate">تنزيل نموذج Excel</button><input id="quickExcel" type="file" accept=".xlsx,.xls" hidden>':'')+'<button class="secondary" data-action="expStaffX">📤 تصدير ملاك القسم (Excel)</button><button class="secondary" data-action="expStaffC">CSV</button></div>'+(isAdmin()?'<p class="muted">الاستيراد يضيف كل صفوف الملف دفعة واحدة. من كان قسمه «إدارة الأعمال» يُضاف إلى ملاك القسم، وغيره يُضاف خارجياً. الأسماء الموجودة مسبقاً تُتجاوز.</p>':'')+teacherTable(db.teachers.filter(t=>!isExternal(t)),false))
+ +section('التدريسيون الخارجيون ('+db.teachers.filter(isExternal).length+')','<div class="tools">'+(isAdmin()?'<button class="secondary" data-action="quickImportExt">📥 استيراد قائمة خارجيين من Excel</button>':'')+'<button class="secondary" data-action="expExtX">📤 تصدير الخارجيين (Excel)</button><button class="secondary" data-action="expExtC">CSV</button></div><p class="muted">يظهرون أسفل تدريسيي القسم في كل قوائم الاختيار (المراقبات، رؤساء القاعات، الجدول الذكي، اللجان)، فيمكن تكليفهم وتوزيعهم كأي تدريسي.</p>'+teacherTable(db.teachers.filter(isExternal),true));
 }
 const teacherOrg=t=>[t.department,t.college].filter(Boolean).join(' – ')||t.affiliation||'';
 // ---------------------------------------------------------------- كشف التدريسيين المتشابهين (الاسم + اسم الأب)
@@ -880,6 +880,20 @@ function dupSection(){
   return '<div class="dup-group"><h4>مجموعة '+(i+1)+' <small class="muted">('+g.length+' أسماء · التشابه في: '+g.why.join('، ')+')</small></h4>'+table(['الاسم','النوع','اللقب','البريد والهاتف','مرتبط بـ',''],g.map(t=>[esc(t.name)+(t===best&&g.length>1?' <span class="pill ok">الأكمل بيانات</span>':''),isExternal(t)?'خارجي':'ملاك القسم',esc(t.rank||'—'),[t.email&&esc(t.email),t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherRefs(t.id).map(([l,n])=>n+' '+esc(l)).join('، ')||'—',actions('teacher',t.id)]))+'</div>';
  }).join('');
  return section('🔎 كشف التدريسيين المتشابهين ('+n+' اسماً في '+gs.length+' مجموعة)','<p class="muted">قارنت الاسم الأول واسم الأب، وكذلك الاسم المختصر (الأول واللقب) بالاسم الكامل، وكذلك البريد الإلكتروني ورقم الهاتف. كل مجموعة أدناه فيها أسماء يُشتبه أنها لشخص واحد. احذف المكرر بزر «حذف»، وانتبه لعمود «مرتبط بـ»: من له ارتباطات (حصص، لجان…) لا يُحذف قبل نقلها. ليس كل تشابه تكراراً، فقد يتفق شخصان في الاسم واسم الأب.</p><p class="muted">العدد الكلي في الدليل: '+db.teachers.length+' تدريسياً.</p>'+body);
+}
+// تصدير قائمة مستقلة: ملاك القسم وحدهم أو الخارجيين وحدهم، مرتبة باللقب العلمي وبصيغة تُستورد من جديد
+async function exportTeachers(ext,fmt){
+ const list=sortTeachers(db.teachers.filter(t=>isExternal(t)===ext));
+ if(!list.length)return toast(ext?'لا يوجد تدريسيون خارجيون لتصديرهم':'لا يوجد تدريسيون من ملاك القسم لتصديرهم');
+ const head=['ت',...TEMPLATE.map(f=>f[1]),'النوع','أيام التواجد','التخصص'];
+ const rows=list.map((t,i)=>[i+1,...TEMPLATE.map(f=>t[f[0]]||''),ext?'خارجي':'ملاك القسم',t.days||'',t.specialty||'']);
+ const name=ext?'التدريسيون_الخارجيون':'تدريسيو_القسم';
+ try{
+  if(fmt==='csv'){download(name+'.csv','\ufeff'+[head,...rows].map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');return}
+  const X=await getSheetJs(),ws=X.utils.aoa_to_sheet([head,...rows]),wb=X.utils.book_new();
+  ws['!cols']=[{wch:5},{wch:30},{wch:34},{wch:24},{wch:20},{wch:14},{wch:28},{wch:16},{wch:14},{wch:22},{wch:22}];
+  ws['!views']=[{RTL:true}];X.utils.book_append_sheet(wb,ws,ext?'خارجيون':'ملاك القسم');X.writeFile(wb,name+'.xlsx');
+ }catch(e){toast('تعذر التصدير: '+e.message)}
 }
 function teacherActions(t){
  if(!isAdmin())return '';
@@ -2378,7 +2392,7 @@ function generateSchedule(){
  save();render();
 }
 function action(a){
-if(a==='exitView')return setViewAs('');if(a==='notif')return enableNotif();if(a==='install')return installApp();if(a==='csvTeachers')csv('teachers');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
+if(a==='exitView')return setViewAs('');if(a==='notif')return enableNotif();if(a==='install')return installApp();if(a==='csvTeachers')csv('teachers');if(a==='expStaffX')return exportTeachers(false,'xlsx');if(a==='expStaffC')return exportTeachers(false,'csv');if(a==='expExtX')return exportTeachers(true,'xlsx');if(a==='expExtC')return exportTeachers(true,'csv');if(a==='teacherTemplate')downloadTemplate();if(a==='quickImport'||a==='quickImportExt'){const i=$('#quickExcel');i.value='';i.onchange=()=>quickImport(i.files[0],a==='quickImportExt'?'external':'');i.click()}if(a==='csvSchedule')csv('schedule');if(a==='print')window.print();
 if(a==='gradImport'){const i=$('#gradFile');i.value='';i.onchange=()=>gradImport(i.files[0]);i.click()}if(a==='gradTemplate')gradTemplate();if(a==='taskExcel')taskExcel();if(a==='gradExcel')gradExcel();
 if(a==='gradClear'&&confirm('حذف كل بحوث التخرج من القائمة؟ (يمكن استعادتها من نقاط الاسترجاع)')){gradEdit().projects=[];gradEditing='';commit('حُذفت القائمة')}
 if(a==='backup'||a==='backupFull')backupFull();if(a==='backupExcel')backupExcel();
