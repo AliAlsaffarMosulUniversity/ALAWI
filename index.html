@@ -1110,7 +1110,9 @@ function nameTokens(v){const w=hk(v).replace(/[.ـ]/g,' ').replace(/عبد\s+/g,
 function matchTeacher(raw){
  const t=nameTokens(raw);if(!t.length)return '';
  const hits=db.teachers.filter(r=>{const w=nameTokens(r.name);if(w[0]!==t[0])return false;let j=1;for(const tok of t.slice(1)){while(j<w.length&&w[j]!==tok)j++;if(j>=w.length)return false;j++}return true});
- return hits.length===1?hits[0].id:'';
+ if(hits.length===1)return hits[0].id;
+ if(hits.length>1){const ex=hits.filter(r=>{const w=nameTokens(r.name);return w.length===t.length&&w.every((x,i)=>x===t[i])});if(ex.length===1)return ex[0].id}
+ return '';
 }
 const ordOf=w=>{w=hk(w).trim();return w.startsWith('الاول')?1:w.startsWith('الثاني')?2:w.startsWith('الثالث')?3:w.startsWith('الرابع')?4:0};
 function parseTimetableSheet(rows,sheetName){
