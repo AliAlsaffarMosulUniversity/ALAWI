@@ -857,9 +857,14 @@ function setTeacherType(id,type){
  t.type=type==='external'?'external':'';
  commit('نُقل «'+t.name+'» إلى '+(isExternal(t)?'التدريسيين الخارجيين':'ملاك القسم'));
 }
+// ترتيب العرض: اللقب العلمي من الأعلى إلى الأدنى، ثم الشهادة (الدكتوراه أولاً)، ثم الاسم
+function teacherRankOrder(t){const r=hk(t.rank||'');return /استاذ مساعد|استاذ م/.test(r)?1:/استاذ/.test(r)?0:/مدرس مساعد/.test(r)?3:/مدرس/.test(r)?2:4}
+function teacherDegOrder(t){const d=hk(t.degree||'');return /دكتوراه|دكتور/.test(d)?0:/ماجستير/.test(d)?1:/بكالوريوس/.test(d)?2:3}
+function sortTeachers(list){return [...list].sort((x,y)=>teacherRankOrder(x)-teacherRankOrder(y)||teacherDegOrder(x)-teacherDegOrder(y)||nameTokens(x.name).join(' ').localeCompare(nameTokens(y.name).join(' '),'ar'))}
 function teacherTable(list,ext){
- return table(['الاسم','اللقب العلمي','الشهادة',ext?'الجهة':'أيام التواجد','التواصل',''],list.map(t=>[esc(t.name),esc(t.rank||'—'),esc(t.degree||'—'),ext?esc(teacherOrg(t)||'—'):teacherDays(t).length?esc(teacherDays(t).join('، ')):pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherActions(t)]));
+ return table(['ت','الاسم','اللقب العلمي','الشهادة',ext?'الجهة':'أيام التواجد','التواصل',''],sortTeachers(list).map((t,i)=>[String(i+1),esc(t.name),esc(t.rank||'—'),esc(t.degree||'—'),ext?esc(teacherOrg(t)||'—'):teacherDays(t).length?esc(teacherDays(t).join('، ')):pill('warn','غير محددة'),[t.email&&'<a href="mailto:'+esc(t.email)+'">'+esc(t.email)+'</a>',t.phone&&'<span dir="ltr">'+esc(t.phone)+'</span>'].filter(Boolean).join('<br>')||'—',teacherActions(t)]));
 }
+
 function announcementsView(){
  const admin=isAdmin();
  const list=db.announcements.slice().reverse().map(a=>{
